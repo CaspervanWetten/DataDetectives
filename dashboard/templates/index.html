@@ -5,13 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.css') }}">
     <title>Hello, World Dashboard</title>
 </head>
 <body>
     <div class="container">
         <h1>Hello, World!</h1>
-        <p>Welcome to your DSS dashboard</p>
         <div id="chart-div">{{ plot_html|safe }}</div>
     </div>
+
+    <div class="container">
+        <h2>Heya, Wereld!</h2>
+        <p>dit is vooral een korte test om te zien in hoeverre bootstrap werkt en of dit de logica volgt die we verwachten</p>
+    </div>
+<script src="{{ url_for('static', filename='bootstrap.js') }}"></script>
 </body>
 </html>
