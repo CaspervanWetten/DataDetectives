@@ -33,10 +33,10 @@ def generate_population_graph():
     combined_data = pd.concat([world_data, netherlands_data])
 
     # Create a bar chart using Plotly for the combined data
-    fig = px.bar(combined_data, x='Year', y='Yearly increase relative to last year', color='Region',
-                title='Yearly Increase in World and Netherlands Population',
+    # print(combined_data['YearIncrease'])
+    fig = px.bar(combined_data, x='Year', y='YearIncrease', color='Region',
+                title='YearlyIncrease',
                 barmode='group')  # Set the barmode to 'group' for side-by-side bars
-
     # Convert the Plotly figure to HTML
     plot_html = fig.to_html(full_html=False)
 
