@@ -1,3 +1,7 @@
+Terminal Commando voor (re)-runnen van de docker: 
+docker-compose up --force-recreate
+
+
 INFOMDDS - Dashboard
 
 This folder holds the barebone example dashboard template. This also provides a jupyter notebook to work on while learning various topics in the practical exercises and classrooms. You do not necessarily have to use this template but provides only a barebone structure in docker if you are looking for inspiration.
