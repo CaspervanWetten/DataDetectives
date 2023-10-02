@@ -6,3 +6,4 @@ sqlalchemy
 pulp 
 country_converter
 python-gnupg
+wbgapi

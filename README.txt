@@ -1,5 +1,6 @@
 Terminal Commando voor (re)-runnen van de docker: 
 docker-compose up --force-recreate
+docker-compose up --build
 
 
 INFOMDDS - Dashboard
