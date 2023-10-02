@@ -1,6 +1,3 @@
-*.pyc 
-*.tsv
-*.csv
-/notebook/data
+*.pyc
 dashboard/__pycache__/*
 notebook/.ipynb_checkpoints/*
