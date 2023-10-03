@@ -3,3 +3,4 @@ dashboard/__pycache__/*
 notebook/.ipynb_checkpoints/*
 notebook/data/.ipynb_checkpoints/*
 notebook/data/temp/*
+*.pyc
