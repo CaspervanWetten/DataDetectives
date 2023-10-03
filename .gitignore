@@ -4,3 +4,4 @@ notebook/.ipynb_checkpoints/*
 notebook/data/.ipynb_checkpoints/*
 notebook/data/temp/*
 *.pyc
+notebook/data/temp.zip
