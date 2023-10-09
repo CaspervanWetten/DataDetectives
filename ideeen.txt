@@ -7,4 +7,5 @@ Elektriciteits data
 
 Weer in verschillende landen
 Treinen 
-
+txt file aanpassen
+wat is probleem
