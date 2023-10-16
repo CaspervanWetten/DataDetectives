@@ -6,3 +6,4 @@ notebook/data/temp/*
 *.pyc
 notebook/data/temp.zip
 *.zip
+*.txt
