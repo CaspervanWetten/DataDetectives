@@ -7,3 +7,12 @@ pulp
 country_converter
 python-gnupg
 wbgapi
+datetime
+p_tqdm
+tqdm
+regex
+pycountry
+requests
+regex
+eurostat
+wbgapi
