@@ -2,16 +2,34 @@ import pandas as pd
 import plotly.express as px
 from flask import Flask, render_template_string, render_template
 from sqlalchemy import create_engine, text, inspect, Table
+from Electricty import MonthlyElectricity
+from Temperature import TemperatureDownloader
+from Population import DownloadPopulationData
+
 
 # Load the csv file into the db
 def _load_data_to_db():
+    # Create a SQLAlchemy engine to connect to the PostgreSQL database
     engine = create_engine("postgresql://student:infomdss@db_dashboard:5432/dashboard")
-
+    
+    # Establish a connection to the database using the engine
+    # The 'with' statement ensures that the connection is properly closed when done
     with engine.connect() as conn:
-        result = conn.execute(text("DROP TABLE IF EXISTS population CASCADE;"))
-
-    population_df = pd.read_csv("../data/world_population.csv", delimiter=";")
-    population_df.to_sql("population", engine, if_exists="replace", index=True)
+        # Execute an SQL command to drop the 'population' table if it exists
+        # The text() function allows you to execute raw SQL statements
+        conn.execute(text("DROP TABLE IF EXISTS population CASCADE;"))
+        conn.execute(text("DROP TABLE IF EXISTS temperature CASCADE;"))
+        conn.execute(text("DROP TABLE IF EXISTS electricity CASCADE;"))
+    
+    # Write the data from the pipelines to the sql database
+    if False:
+        MonthlyElectricity().to_sql("electricity", engine, if_exists="replace", index=True)
+        TemperatureDownloader().to_sql("temperature", engine, if_exists="replace", index=True)
+        DownloadPopulationData().to_sql("population", engine, if_exists="replace", index=True)
+    else:
+        pd.read_csv("data/population.csv").to_sql("population", engine, if_exists="replace", index=True)
+        pd.read_csv("data/temperature.csv").to_sql("temperature", engine, if_exists="replace", index=True)
+        pd.read_csv("data/electricity.csv").to_sql("electricity", engine, if_exists="replace", index=True)
 
 # Fetch the hardcoded population table from the database
 def _fetch_data_from_db():
@@ -24,19 +42,10 @@ def _fetch_data_from_db():
 def generate_population_graph():
     # Get the table from the database, returns a dataframe of the table
     population_df = _fetch_data_from_db()
-    population_df['YearIncrease'] = population_df['YearIncrease'].str.replace(',','.').astype(float)
+    data_netherlands = population_df["country"]="NLD"
+    print(population_df.head())
 
-    world_data = population_df[population_df['Region'] == 'WORLD']
-    netherlands_data = population_df[population_df['Region'] == 'Netherlands']
-
-    # Combine the data for World and Netherlands into a single DataFrame
-    combined_data = pd.concat([world_data, netherlands_data])
-
-    # Create a bar chart using Plotly for the combined data
-    # print(combined_data['YearIncrease'])
-    fig = px.bar(combined_data, x='Year', y='YearIncrease', color='Region',
-                title='YearlyIncrease',
-                barmode='group')  # Set the barmode to 'group' for side-by-side bars
+    fig = px.bar(population_df, x='Date', y='Population', barmode='group')  # Set the barmode to 'group' for side-by-side bars
     # Convert the Plotly figure to HTML
     plot_html = fig.to_html(full_html=False)
 
@@ -57,7 +66,7 @@ app = Flask(__name__)
 def index():
     # As soon as the page is loaded, the data is retrieved from the db and the graph is created
     # And is put in the HTML div
-    return render_template('index.html', plot_html=generate_population_graph())
+    return render_template('index.html')
 
 if __name__ == '__main__':
     app.run(debug=True)

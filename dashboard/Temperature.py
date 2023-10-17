@@ -1,6 +1,7 @@
 import requests
 import zipfile
 import os
+import pycountry
 import pandas as pd
 import regex as re
 from tqdm import tqdm
@@ -89,6 +90,10 @@ def RenameFiles(folderPath, CountryIDs, reg=r"TG_STAID0(\d*)", group=1):
         newName = CountryIDs[stationId] + stationId + '.txt'
         os.rename(os.path.join(folderPath, file), os.path.join(folderPath, newName))
 
+def ConvertAlpha2(code):
+    return pycountry.countries.get(alpha_2=code).alpha_3
+
+
 def GenerateTemperatureDataframes(filePath):
     """
     Generates a pandas DataFrame from a CSV file containing temperature data.
@@ -99,7 +104,7 @@ def GenerateTemperatureDataframes(filePath):
         country = re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)", filePath).group(1)
     else:
         print(f"No match with {filePath}")
-        return False, False
+        return False, False      
     with open(filePath, 'r') as f:
         df = pd.read_csv(f, header=None, skiprows=21, names=["STAID", "SOUID", "DATE", "TG", "Q_TG"], usecols=["DATE", "TG", "Q_TG"])
     df = df[df["Q_TG"].astype(int).isin([0, 1])]
@@ -124,19 +129,21 @@ def CleanTemperatureDataframes(results, dataframeDict, folderPath = "data/temper
         if country in dataframeDict.keys():
             dataframeDict[country].append(df)
     #Filter out the empty countries:
-    dataframeDict = {key: val for key, val in dataframeDict.items() if val}
-    #Average the temperatures of the same days
+    dataframeDict = {ConvertAlpha2(key): val for key, val in dataframeDict.items() if val}
+    #Average the temperatures of the same months
     for country, dfList in dataframeDict.items():
             concated = pd.concat(dfList, ignore_index=True)
             dataframeDict[country] = concated.groupby('Date')['Temperature'].mean().round().reset_index()
+    
+    
     #Legacy Saving Code, I'm unsure if it actually works
-    if save:
+    if save:    
         for key, value in dataframeDict.items():
             value.to_csv(folderPath+str(key)+".csv", index=False)
     return dataframeDict
 
 def CombineSavedCSV(folder_path):
-    #Dit is Legacy Code, ik kan je oprecht niet met zekerheid vertellen of het werkt
+    #Dit is Legacy Code, ik kan je oprecht niet met zekerheid vertellen of het werkt 
     csv_files = [f for f in os.listdir(folder_path) if f.endswith('.csv')]
     combined_df = pd.DataFrame(columns=["Date"])
     for file in csv_files:
@@ -154,11 +161,12 @@ def CombineCSVDict(dict):
     Parameters: dict: A dictionary containing the DataFrames to be combined.
     Returns: A DataFrame containing data from all input DataFrames, matched on the Date column.
     """
-    result = pd.DataFrame(columns=["Date"])
     dfs = [df.set_index('Date').rename(columns={"Temperature" : country}) for country, df in dict.items()]
-    result = pd.concat(dfs, axis=1)
+    result = pd.concat(dfs, axis=1).reset_index()
+    result = pd.melt(result, id_vars=['Date'], var_name='Country', value_name='Temperature')
+    result = result.dropna(subset=['Temperature'])
+    result = result[result['Date']>= '2000']
     return result
-
 
 def DownloadTemperatureData(url, folderPath):
     """
@@ -176,7 +184,7 @@ def ClassifyTemperatureData(folderPath):
 
 def RemoveFile(file):
     """
-    Fucks your mother
+    Removes a file
     Args: File, the path to the file that will be removed
     """
     os.remove(file)
@@ -188,25 +196,24 @@ def TemperatureDownloader():
     Downloads, processes, and cleans temperature data from the KNMI Climate Explorer.
     """
     url = "https://knmi-ecad-assets-prd.s3.amazonaws.com/download/ECA_blend_tg.zip"
-    folderPath = "notebook/data/temperature/"
-    EUList = ['AT', 'BE', 'BG', 'HR', 'CY', 'DK', 'EE', 'FI', 'FR', 'DE', 'IE', 'IT', 'LV', 'LU', 'NL', 'NO', 'PL',
-              'RO', 'ES', 'SE', 'CH', 'GB']
+    folderPath = "data/"
+    EUList = ['AT', 'BE', 'BG', 'HR', 'CY', 'DK', 'EE', 'FI', 'FR', 'DE', 'IE', 'IT', 'LV', 'LU', 'NL', 'NO', 'PL', 'RO', 'ES', 'SE', 'CH', 'GB']
     dataframeDict = {key: [] for key in EUList}
 
     # Prepare all the data for processing
     # TODO If internet dies halfway through the download, it fails and the function errors out
-    # DownloadTemperatureData(url, folderPath)
-    # ExtractZip(folderPath+"download.zip", folderPath)
-    # ClassifyTemperatureData(folderPath)
+    try:
+        DownloadTemperatureData(url, folderPath)
+        # ExtractZip(folderPath+"download.zip", folderPath)
+        ClassifyTemperatureData(folderPath)
+        files = [folderPath+filename for filename in os.listdir(folderPath) if filename.endswith(".txt")]
+        results = p_umap(GenerateTemperatureDataframes, files, desc="Preparing the data", num_cpus=3)
+        print("Generating temperature mapping...")
+        dict = CleanTemperatureDataframes(results, dataframeDict, save=False)
+        dict = CombineCSVDict(dict)
+        toClean = [os.path.join(folderPath, file) for file in os.listdir(folderPath) if file.endswith(".txt")]
+        p_map(RemoveFile, toClean, desc="Cleaning leftover files")
 
-    files = [folderPath + filename for filename in os.listdir(folderPath) if filename.endswith(".txt")]
-    results = p_umap(GenerateTemperatureDataframes, files, desc="Preparing the data", num_cpus=4)
-    print("Generating temperature mapping...")
-    dict = CleanTemperatureDataframes(results, dataframeDict, save=False)
-    dict = CombineCSVDict(dict)
-    dict.to_csv(folderPath + "TemperatureData.csv")
-    toClean = [os.path.join(folderPath, file) for file in os.listdir(folderPath) if file.endswith(".txt")]
-    p_map(RemoveFile, toClean, desc="Cleaning leftover files")
-
-
-TemperatureDownloader()
+        return dict
+    except Exception as e:
+        print(f"quit with {e} as error")
