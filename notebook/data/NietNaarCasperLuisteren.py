@@ -39,21 +39,32 @@ selected_country = ""  # Initialize to an empty string
 # Get a list of available years
 available_years = df['Year'].unique()
 
+# Define the layout using Bootstrap and HTML
 app.layout = html.Div([
-    dcc.Graph(id='choropleth'),
-    dcc.RadioItems(
-        id='year-radio',
-        options=[{'label': str(year), 'value': year} for year in available_years],
-        value=selected_year,  # Default to the first year
-    ),
-    dcc.Slider(
-        id='month-slider',
-        marks={month: str(month) for month in range(1, 13)},
-        step=None,
-    ),
-    dcc.Graph(id='pie-chart'),
-    dcc.Graph(id='histogram'),
-    dcc.Graph(id='line-chart')
+    # Create a Bootstrap row
+    html.Div([
+        # Left column (Choropleth map)
+        html.Div([
+            dcc.Graph(id='choropleth'),
+            dcc.RadioItems(
+                id='year-radio',
+                options=[{'label': str(year), 'value': year} for year in available_years],
+                value=selected_year,  # Default to the first year
+            ),
+            dcc.Slider(
+                id='month-slider',
+                marks={month: str(month) for month in range(1, 13)},
+                step=None,
+            ),
+        ], className='col-md-6'),  # Bootstrap class for a 6-column width
+
+        # Right column (Other plots)
+        html.Div([
+            dcc.Graph(id='pie-chart'),
+            dcc.Graph(id='histogram'),
+            dcc.Graph(id='line-chart'),
+        ], className='col-md-6'),  # Bootstrap class for a 6-column width
+    ], className='row'),  # Bootstrap class for a row
 ])
 
 @app.callback(
@@ -150,7 +161,6 @@ def display_line_chart(selected_year, clickData):
     fig = px.line(filtered_df, x='Month', y='Temperature', color='Year', title=f'Temperatuur in een linechart van {selected_country} in het jaar {selected_year}')
     return fig
 
-
-print("Genieus")
+print("H")
 if __name__ == '__main__':
     app.run_server(debug=True, host='127.0.0.1', port=7778)
