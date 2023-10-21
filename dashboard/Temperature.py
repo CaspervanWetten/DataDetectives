@@ -5,8 +5,7 @@ import pycountry
 import pandas as pd
 import regex as re
 from tqdm import tqdm
-from p_tqdm import p_map, p_umap
-from datetime import datetime
+from p_tqdm import p_map
 
 # Dit zijn meer algehele, saaie helper functies:
 
@@ -94,79 +93,82 @@ def ConvertAlpha2(code):
     return pycountry.countries.get(alpha_2=code).alpha_3
 
 
-def GenerateTemperatureDataframes(filePath):
+def GenerateTemperatureDataframes(txt, engine):
     """
     Generates a pandas DataFrame from a CSV file containing temperature data.
     Parameters: filePath (str): The path to the CSV file, regex matching on (text/)*(countryName)(number)
     Returns: tuple: A tuple containing the country name and the generated DataFrame.
     """
-    if re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)" ,filePath):
-        country = re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)", filePath).group(1)
-    else:
-        print(f"No match with {filePath}")
-        return False, False      
-    with open(filePath, 'r') as f:
-        df = pd.read_csv(f, header=None, skiprows=21, names=["STAID", "SOUID", "DATE", "TG", "Q_TG"], usecols=["DATE", "TG", "Q_TG"])
+    if not re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)" ,txt):
+        print(f"No match with {txt}")
+        return
+    if re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)", txt).group(1) in EUList:
+        country = ConvertAlpha2(re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)", txt).group(1))
+    df = pd.read_csv(txt, header=None, skiprows=21, names=["STAID", "SOUID", "DATE", "TG", "Q_TG"], usecols=["DATE", "TG", "Q_TG"])
     df = df[df["Q_TG"].astype(int).isin([0, 1])]
     df["TG"] = df["TG"].astype(float) / 10
     df["DATE"] = pd.to_datetime(df["DATE"], format="%Y%m%d").dt.strftime('%Y-%m')
-    df = df[["DATE", "TG"]]
-    df = df.rename(columns={'DATE': 'Date', 'TG': 'Temperature'})
-    return country, df
+    df = df[["DATE", "TG"]].rename(columns={'DATE': 'Date', 'TG': 'Temperature'})
+    df = df.groupby('Date')['Temperature'].mean().round().reset_index()
+    df = df.dropna(subset=['Temperature'])
+    df = df[df['Date']>= '2000']
+    df['Country'] = country
+    df.to_sql("temperature", engine, if_exists="append", index=False)
+    return
 
-def CleanTemperatureDataframes(results, dataframeDict, folderPath = "data/temperature/", save = False):
-    """
-    Cleans and processes temperature dataframes.
-    Parameters: results (list): A list of tuples containing country names and their respective dataframes.
-        dataframeDict (dict): A dictionary to store the cleaned dataframes.
-        folderPath (str): The path to the folder where the cleaned dataframes will be saved.
-        save (bool): A flag indicating whether to save the cleaned dataframes to disk.
-    Returns: dict: A dictionary containing cleaned dataframes grouped by country name.
-    """
-    for result in results:
-        country = result[0]
-        df = result[1]
-        if country in dataframeDict.keys():
-            dataframeDict[country].append(df)
-    #Filter out the empty countries:
-    dataframeDict = {ConvertAlpha2(key): val for key, val in dataframeDict.items() if val}
-    #Average the temperatures of the same months
-    for country, dfList in dataframeDict.items():
-            concated = pd.concat(dfList, ignore_index=True)
-            dataframeDict[country] = concated.groupby('Date')['Temperature'].mean().round().reset_index()
+# def CleanTemperatureDataframes(results, dataframeDict, folderPath = "data/temperature/", save = False):
+#     """
+#     Cleans and processes temperature dataframes.
+#     Parameters: results (list): A list of tuples containing country names and their respective dataframes.
+#         dataframeDict (dict): A dictionary to store the cleaned dataframes.
+#         folderPath (str): The path to the folder where the cleaned dataframes will be saved.
+#         save (bool): A flag indicating whether to save the cleaned dataframes to disk.
+#     Returns: dict: A dictionary containing cleaned dataframes grouped by country name.
+#     """
+#     for result in results:
+#         country = result[0]
+#         df = result[1]
+#         if country in dataframeDict.keys():
+#             dataframeDict[country].append(df)
+#     #Filter out the empty countries:
+#     dataframeDict = {ConvertAlpha2(key): val for key, val in dataframeDict.items() if val}
+#     #Average the temperatures of the same months
+#     for country, dfList in dataframeDict.items():
+#             concated = pd.concat(dfList, ignore_index=True)
+#             dataframeDict[country] = concated.groupby('Date')['Temperature'].mean().round().reset_index()
     
     
-    #Legacy Saving Code, I'm unsure if it actually works
-    if save:    
-        for key, value in dataframeDict.items():
-            value.to_csv(folderPath+str(key)+".csv", index=False)
-    return dataframeDict
+#     #Legacy Saving Code, I'm unsure if it actually works
+#     if save:    
+#         for key, value in dataframeDict.items():
+#             value.to_csv(folderPath+str(key)+".csv", index=False)
+#     return dataframeDict
 
-def CombineSavedCSV(folder_path):
-    #Dit is Legacy Code, ik kan je oprecht niet met zekerheid vertellen of het werkt 
-    csv_files = [f for f in os.listdir(folder_path) if f.endswith('.csv')]
-    combined_df = pd.DataFrame(columns=["Date"])
-    for file in csv_files:
-        df = pd.read_csv(os.path.join(folder_path, file))
-        df.set_index('Date', inplace=True)
-        country_name = os.path.splitext(file)[0]
-        df.rename(columns={'Temperature': country_name}, inplace=True)
-        combined_df = combined_df.join(df, how='outer')
-    combined_df = combined_df.reindex(sorted(combined_df.columns), axis=1)
-    return combined_df
+# def CombineSavedCSV(folder_path):
+#     #Dit is Legacy Code, ik kan je oprecht niet met zekerheid vertellen of het werkt 
+#     csv_files = [f for f in os.listdir(folder_path) if f.endswith('.csv')]
+#     combined_df = pd.DataFrame(columns=["Date"])
+#     for file in csv_files:
+#         df = pd.read_csv(os.path.join(folder_path, file))
+#         df.set_index('Date', inplace=True)
+#         country_name = os.path.splitext(file)[0]
+#         df.rename(columns={'Temperature': country_name}, inplace=True)
+#         combined_df = combined_df.join(df, how='outer')
+#     combined_df = combined_df.reindex(sorted(combined_df.columns), axis=1)
+#     return combined_df
 
-def CombineCSVDict(dict):
-    """
-    Combines multiple pandas DataFrames into a single DataFrame.
-    Parameters: dict: A dictionary containing the DataFrames to be combined.
-    Returns: A DataFrame containing data from all input DataFrames, matched on the Date column.
-    """
-    dfs = [df.set_index('Date').rename(columns={"Temperature" : country}) for country, df in dict.items()]
-    result = pd.concat(dfs, axis=1).reset_index()
-    result = pd.melt(result, id_vars=['Date'], var_name='Country', value_name='Temperature')
-    result = result.dropna(subset=['Temperature'])
-    result = result[result['Date']>= '2000']
-    return result
+# def CombineCSVDict(dict):
+    # """
+    # Combines multiple pandas DataFrames into a single DataFrame.
+    # Parameters: dict: A dictionary containing the DataFrames to be combined.
+    # Returns: A DataFrame containing data from all input DataFrames, matched on the Date column.
+    # """
+    # dfs = [df.set_index('Date').rename(columns={"Temperature" : country}) for country, df in dict.items()]
+    # result = pd.concat(dfs, axis=1).reset_index()
+    # result = pd.melt(result, id_vars=['Date'], var_name='Country', value_name='Temperature')
+    # result = result.dropna(subset=['Temperature'])
+    # result = result[result['Date']>= '2000']
+    # return result
 
 def DownloadTemperatureData(url, folderPath):
     """
@@ -191,29 +193,46 @@ def RemoveFile(file):
 
 
 # Alles samenkomend ziet het er zo uit:
-def TemperatureDownloader():
+def TemperatureDownloader(engine):
     """
     Downloads, processes, and cleans temperature data from the KNMI Climate Explorer.
     """
     url = "https://knmi-ecad-assets-prd.s3.amazonaws.com/download/ECA_blend_tg.zip"
     folderPath = "data/"
     EUList = ['AT', 'BE', 'BG', 'HR', 'CY', 'DK', 'EE', 'FI', 'FR', 'DE', 'IE', 'IT', 'LV', 'LU', 'NL', 'NO', 'PL', 'RO', 'ES', 'SE', 'CH', 'GB']
-    dataframeDict = {key: [] for key in EUList}
 
     # Prepare all the data for processing
     # TODO If internet dies halfway through the download, it fails and the function errors out
     try:
-        DownloadTemperatureData(url, folderPath)
+        # DownloadTemperatureData(url, folderPath)
         # ExtractZip(folderPath+"download.zip", folderPath)
         ClassifyTemperatureData(folderPath)
-        files = [folderPath+filename for filename in os.listdir(folderPath) if filename.endswith(".txt")]
-        results = p_umap(GenerateTemperatureDataframes, files, desc="Preparing the data", num_cpus=3)
+
+        files = [folderPath+filename for filename in os.listdir(folderPath) if filename.endswith(".txt")]        
+        for txt in tqdm(files, desc="Preparing the data"):
+            if not re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)" ,txt):
+                print(f"No match with {txt}")
+                continue
+            if re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)", txt).group(1) in EUList:
+                country = ConvertAlpha2(re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)", txt).group(1))
+            df = pd.read_csv(txt, header=None, skiprows=21, names=["STAID", "SOUID", "DATE", "TG", "Q_TG"], usecols=["DATE", "TG", "Q_TG"])
+            df = df[df["Q_TG"].astype(int).isin([0, 1])]
+            df["TG"] = df["TG"].astype(float) / 10
+            df["DATE"] = pd.to_datetime(df["DATE"], format="%Y%m%d").dt.strftime('%Y-%m')
+            df = df[["DATE", "TG"]].rename(columns={'DATE': 'Date', 'TG': 'Temperature'})
+            df = df.groupby('Date')['Temperature'].mean().round().reset_index()
+            df = df.dropna(subset=['Temperature'])
+            df = df[df['Date']>= '2000']
+            df['Country'] = country
+            df.to_sql("temperature", engine, if_exists="append", index=False)
+            df.to_csv("temperature.csv", index=False)
+
+
         print("Generating temperature mapping...")
-        dict = CleanTemperatureDataframes(results, dataframeDict, save=False)
-        dict = CombineCSVDict(dict)
         toClean = [os.path.join(folderPath, file) for file in os.listdir(folderPath) if file.endswith(".txt")]
         p_map(RemoveFile, toClean, desc="Cleaning leftover files")
-
-        return dict
+        return
     except Exception as e:
-        print(f"quit with {e} as error")
+        print(f"quit with \n {e} \n as error")
+
+TemperatureDownloader()
