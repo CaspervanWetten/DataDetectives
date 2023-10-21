@@ -225,7 +225,7 @@ def TemperatureDownloader(engine):
             df = df[df['Date']>= '2000']
             df['Country'] = country
             df.to_sql("temperature", engine, if_exists="append", index=False)
-            df.to_csv("temperature.csv", index=False)
+            # df.to_csv("temperature.csv", index=False)
 
 
         print("Generating temperature mapping...")
@@ -234,5 +234,3 @@ def TemperatureDownloader(engine):
         return
     except Exception as e:
         print(f"quit with \n {e} \n as error")
-
-TemperatureDownloader()
