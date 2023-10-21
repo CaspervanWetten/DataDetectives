@@ -1,7 +1,8 @@
 import pandas as pd
 import plotly.express as px
 from flask import Flask, render_template_string, render_template
-from sqlalchemy import create_engine, text, inspect, Table
+from sqlalchemy import create_engine, text, inspect, Table, MetaData
+from sqlalchemy.orm import sessionmaker
 from Electricty import MonthlyElectricity
 from Temperature import TemperatureDownloader
 from Population import DownloadPopulationData
@@ -12,7 +13,14 @@ def _load_data_to_db():
     # Create a SQLAlchemy engine to connect to the PostgreSQL database
     engine = create_engine("postgresql://student:infomdss@db_dashboard:5432/dashboard")
     
-    # Establish a connection to the database using the engine
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    meta = MetaData()
+    table = Table('temperature', meta)
+    session.query(table).delete()
+    session.commit()
+
+    # Establish a connection to the database using the engine and delete all existing tables
     # The 'with' statement ensures that the connection is properly closed when done
     with engine.connect() as conn:
         # Execute an SQL command to drop the 'population' table if it exists
@@ -23,8 +31,8 @@ def _load_data_to_db():
     
     # Write the data from the pipelines to the sql database
     if False:
+        TemperatureDownloader(engine)
         MonthlyElectricity().to_sql("electricity", engine, if_exists="replace", index=True)
-        TemperatureDownloader().to_sql("temperature", engine, if_exists="replace", index=True)
         DownloadPopulationData().to_sql("population", engine, if_exists="replace", index=True)
     else:
         pd.read_csv("data/population.csv").to_sql("population", engine, if_exists="replace", index=True)
