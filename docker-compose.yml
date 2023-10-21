@@ -2,6 +2,7 @@ version: '3'
 services:
     
     flask-app:
+        tty: true
         build:
             context: .
             dockerfile: dashboard/Dockerfile_dashboard  # Specify the unique Dockerfile name I'm so not sure how this works

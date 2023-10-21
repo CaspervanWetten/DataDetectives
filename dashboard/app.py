@@ -12,14 +12,6 @@ from Population import DownloadPopulationData
 def _load_data_to_db():
     # Create a SQLAlchemy engine to connect to the PostgreSQL database
     engine = create_engine("postgresql://student:infomdss@db_dashboard:5432/dashboard")
-    
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    meta = MetaData()
-    table = Table('temperature', meta)
-    session.query(table).delete()
-    session.commit()
-
     # Establish a connection to the database using the engine and delete all existing tables
     # The 'with' statement ensures that the connection is properly closed when done
     with engine.connect() as conn:

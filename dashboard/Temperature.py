@@ -92,30 +92,6 @@ def RenameFiles(folderPath, CountryIDs, reg=r"TG_STAID0(\d*)", group=1):
 def ConvertAlpha2(code):
     return pycountry.countries.get(alpha_2=code).alpha_3
 
-
-def GenerateTemperatureDataframes(txt, engine):
-    """
-    Generates a pandas DataFrame from a CSV file containing temperature data.
-    Parameters: filePath (str): The path to the CSV file, regex matching on (text/)*(countryName)(number)
-    Returns: tuple: A tuple containing the country name and the generated DataFrame.
-    """
-    if not re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)" ,txt):
-        print(f"No match with {txt}")
-        return
-    if re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)", txt).group(1) in EUList:
-        country = ConvertAlpha2(re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)", txt).group(1))
-    df = pd.read_csv(txt, header=None, skiprows=21, names=["STAID", "SOUID", "DATE", "TG", "Q_TG"], usecols=["DATE", "TG", "Q_TG"])
-    df = df[df["Q_TG"].astype(int).isin([0, 1])]
-    df["TG"] = df["TG"].astype(float) / 10
-    df["DATE"] = pd.to_datetime(df["DATE"], format="%Y%m%d").dt.strftime('%Y-%m')
-    df = df[["DATE", "TG"]].rename(columns={'DATE': 'Date', 'TG': 'Temperature'})
-    df = df.groupby('Date')['Temperature'].mean().round().reset_index()
-    df = df.dropna(subset=['Temperature'])
-    df = df[df['Date']>= '2000']
-    df['Country'] = country
-    df.to_sql("temperature", engine, if_exists="append", index=False)
-    return
-
 # def CleanTemperatureDataframes(results, dataframeDict, folderPath = "data/temperature/", save = False):
 #     """
 #     Cleans and processes temperature dataframes.
@@ -200,12 +176,12 @@ def TemperatureDownloader(engine):
     url = "https://knmi-ecad-assets-prd.s3.amazonaws.com/download/ECA_blend_tg.zip"
     folderPath = "data/"
     EUList = ['AT', 'BE', 'BG', 'HR', 'CY', 'DK', 'EE', 'FI', 'FR', 'DE', 'IE', 'IT', 'LV', 'LU', 'NL', 'NO', 'PL', 'RO', 'ES', 'SE', 'CH', 'GB']
+    dataframeDict = {key: [] for key in EUList}
 
     # Prepare all the data for processing
     # TODO If internet dies halfway through the download, it fails and the function errors out
     try:
-        # DownloadTemperatureData(url, folderPath)
-        # ExtractZip(folderPath+"download.zip", folderPath)
+        DownloadTemperatureData(url, folderPath)
         ClassifyTemperatureData(folderPath)
 
         files = [folderPath+filename for filename in os.listdir(folderPath) if filename.endswith(".txt")]        
@@ -225,7 +201,8 @@ def TemperatureDownloader(engine):
             df = df[df['Date']>= '2000']
             df['Country'] = country
             df.to_sql("temperature", engine, if_exists="append", index=False)
-            # df.to_csv("temperature.csv", index=False)
+            print(df.head(1))
+            df.to_csv("data/temperature.csv", mode='a', index=False, header=False)
 
 
         print("Generating temperature mapping...")
