@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from Electricty import MonthlyElectricity
 from Temperature import TemperatureDownloader
 from Population import DownloadPopulationData
+from Charts import update_choropleth, update_histogram, update_line_chart, update_pie_chart
 
 
 # Load the csv file into the db
@@ -38,6 +39,15 @@ def _fetch_data_from_db():
 
     return population_table
 
+def _fetch_population(engine):
+    return pd.read_sql_table('population', con=engine, index_col="index")
+
+def _fetch_temperature(engine):
+    return pd.read_sql_table('temperature', con=engine, index_col="index")
+
+def _fetch_electricityY(engine):
+    return pd.read_sql_table('electricity', con=engine, index_col="index")
+
 # Generate the interactive plot for in your HTML file
 def generate_population_graph():
     # Get the table from the database, returns a dataframe of the table
@@ -64,9 +74,19 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
+    engine = create_engine("postgresql://student:infomdss@db_dashboard:5432/dashboard")
+    selected_year = 2007
+    selected_indic = "Consumption"
     # As soon as the page is loaded, the data is retrieved from the db and the graph is created
     # And is put in the HTML div
-    return render_template('index.html')
+    Edf = _fetch_electricityY(engine=engine)
+    choropleth = update_choropleth(Edf, selected_year, selected_indic)
+
+
+
+
+    return render_template('index.html', plot_html=choropleth)
 
 if __name__ == '__main__':
+    print("WAAAH")
     app.run(debug=True)

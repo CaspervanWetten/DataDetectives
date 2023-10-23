@@ -16,3 +16,4 @@ requests
 regex
 eurostat
 wbgapi
+dash
