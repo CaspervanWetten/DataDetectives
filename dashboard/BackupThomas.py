@@ -15,7 +15,6 @@ def convert_alpha2_to_alpha3(alpha2_code):
     try:
         return pycountry.countries.get(alpha_2=alpha2_code).alpha_3
     except AttributeError:
-        print(f"Kan de code niet vinden: {alpha2_code}")
         return None
 
 # Apply the alpha-3 country codes
