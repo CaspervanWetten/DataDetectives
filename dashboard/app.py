@@ -1,92 +1,38 @@
+import dash
 import pandas as pd
+import plotly.graph_objects as go
 import plotly.express as px
-from flask import Flask, render_template_string, render_template
-from sqlalchemy import create_engine, text, inspect, Table, MetaData
-from sqlalchemy.orm import sessionmaker
 from Electricty import MonthlyElectricity
 from Temperature import TemperatureDownloader
 from Population import DownloadPopulationData
-from Charts import update_choropleth, update_histogram, update_line_chart, update_pie_chart
+from os import listdir
+from dash import dcc
+from dash import html
+from dash.dependencies import Input, Output
+from Charts import update_choropleth
+from Database import Database
 
+app = dash.Dash(__name__)
+server = app.server
+app.css.config.serve_locally = True
+app.scripts.config.serve_locally = True
+app.title="We testen wat!"
+app.description="Dit is een omschrijving 0_O"
 
-# Load the csv file into the db
-def _load_data_to_db():
-    # Create a SQLAlchemy engine to connect to the PostgreSQL database
-    engine = create_engine("postgresql://student:infomdss@db_dashboard:5432/dashboard")
-    # Establish a connection to the database using the engine and delete all existing tables
-    # The 'with' statement ensures that the connection is properly closed when done
-    with engine.connect() as conn:
-        # Execute an SQL command to drop the 'population' table if it exists
-        # The text() function allows you to execute raw SQL statements
-        conn.execute(text("DROP TABLE IF EXISTS population CASCADE;"))
-        conn.execute(text("DROP TABLE IF EXISTS temperature CASCADE;"))
-        conn.execute(text("DROP TABLE IF EXISTS electricity CASCADE;"))
-    
-    # Write the data from the pipelines to the sql database
-    if False:
-        TemperatureDownloader(engine)
-        MonthlyElectricity().to_sql("electricity", engine, if_exists="replace", index=True)
-        DownloadPopulationData().to_sql("population", engine, if_exists="replace", index=True)
-    else:
-        pd.read_csv("data/population.csv").to_sql("population", engine, if_exists="replace", index=True)
-        pd.read_csv("data/temperature.csv").to_sql("temperature", engine, if_exists="replace", index=True)
-        pd.read_csv("data/electricity.csv").to_sql("electricity", engine, if_exists="replace", index=True)
+db = Database()
 
-# Fetch the hardcoded population table from the database
-def _fetch_data_from_db():
-    engine = create_engine("postgresql://student:infomdss@db_dashboard:5432/dashboard")
-    population_table = pd.read_sql_table('population', engine, index_col='index')
+population_df = db._fetch_data("population")
+print(population_df.head(10))
 
-    return population_table
-
-def _fetch_population(engine):
-    return pd.read_sql_table('population', con=engine, index_col="index")
-
-def _fetch_temperature(engine):
-    return pd.read_sql_table('temperature', con=engine, index_col="index")
-
-def _fetch_electricityY(engine):
-    return pd.read_sql_table('electricity', con=engine, index_col="index")
-
-# Generate the interactive plot for in your HTML file
-def generate_population_graph():
-    # Get the table from the database, returns a dataframe of the table
-    population_df = _fetch_data_from_db()
-    data_netherlands = population_df["country"]="NLD"
-    print(population_df.head())
-
-    fig = px.bar(population_df, x='Date', y='Population', barmode='group')  # Set the barmode to 'group' for side-by-side bars
-    # Convert the Plotly figure to HTML
-    plot_html = fig.to_html(full_html=False)
-
-    return plot_html
-
-
-# Load the data into the database
-# You will do this asynchronously as a cronjob in the background of your application
-# Or you fetch the data from different sources when the page is visited or how you like to fetch your data
-# Notice that the method _load_data_to_db() now just reads a preloaded .csv file
-# You will have to fetch external files, or call API's to fill your database
-_load_data_to_db()
-
-# Initialize the Flask application
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    engine = create_engine("postgresql://student:infomdss@db_dashboard:5432/dashboard")
-    selected_year = 2007
-    selected_indic = "Consumption"
-    # As soon as the page is loaded, the data is retrieved from the db and the graph is created
-    # And is put in the HTML div
-    Edf = _fetch_electricityY(engine=engine)
-    choropleth = update_choropleth(Edf, selected_year, selected_indic)
-
-
-
-
-    return render_template('index.html', plot_html=choropleth)
+app.layout = html.Div([
+    html.H1('Hello Dash!'),
+    html.P('Dash converts this kind of semi-python into html'),
+    html.Div([
+        html.Div('Lorem ipsum 1', className='col'),
+        html.Div('Lorem ipsum 2', className='col col-lg-2')
+    ], className='row')
+], className='container')
 
 if __name__ == '__main__':
-    print("WAAAH")
-    app.run(debug=True)
+    print("Started")
+    app.run_server(debug=True, host='172.19.0.3', port=5000)

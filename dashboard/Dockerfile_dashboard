@@ -17,7 +17,7 @@ RUN pip install -r requirements.txt
 EXPOSE 5000
 
 # Define environment variable
-ENV FLASK_APP app.py
+ENV DASH_APP app.py
 
 # Run the Flask app
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+CMD ["python3", "app.py"]
