@@ -48,12 +48,20 @@ class Database:
         for key, value in kwargs.items():
             value.to_sql(str(key), self.engine, if_exists=exists, index=True)
 
-    def _fetch_data(self, table):
+    def _fetch_data(self, query):
         """
         Fetch data from a specified table.
         Args:
-            table (str): Table name to fetch data from.
+            query (str): The query to fetch the data,
         Returns:
             pd.DataFrame: DataFrame containing the fetched data.
+            or
+            str: A "failed to execute" string which shows the error
         """
-        return pd.read_sql_table(table, con=self.engine, index_col="index")
+        try:
+            df = pd.read_sql_query(query, self.engine)
+        except Exception as e:
+            return f"failed to execute {query} with \n {e} \n as error"
+        return df
+
+        
