@@ -1,6 +1,5 @@
 import pandas as pd
-from sqlalchemy import create_engine
-from os import listdir
+from sqlalchemy import create_engine, Table, MetaData, select
 
 class Database:
     """
@@ -23,6 +22,7 @@ class Database:
             engine (str): The database engine (i.e., PostgreSQL connection string).
         """
         self.engine = create_engine("postgresql://student:infomdss@db_dashboard:5432/dashboard")
+        self.metadata = MetaData()
 
     def _drop_data(self, *tables):
         """
@@ -48,20 +48,34 @@ class Database:
         for key, value in kwargs.items():
             value.to_sql(str(key), self.engine, if_exists=exists, index=True)
 
-    def _fetch_data(self, query):
+    def _fetch_data(self, sel_table, *sel_columns, **sel_where):
         """
         Fetch data from a specified table.
         Args:
-            query (str): The query to fetch the data,
+            sel_table (str): name of the table
+            sel_columns: a list of returned columns, passing none will return all columns
+            sel_where: keyword arguments where column name == conditional, passing no
+            so SELECT Country, GWH FROM electricity WHERE year == 2010 would be  _fetch_data(electricity, Country, GWH, year=2010)
         Returns:
             pd.DataFrame: DataFrame containing the fetched data.
             or
             str: A "failed to execute" string which shows the error
         """
-        try:
-            df = pd.read_sql_query(query, self.engine)
-        except Exception as e:
-            return f"failed to execute {query} with \n {e} \n as error"
-        return df
+        table = Table(sel_table, self.metadata, autoload_with=self.engine)
 
-        
+        if sel_columns:
+            columns = [table.c[col] for col in sel_columns]
+        else:
+            columns = [table.c[col] for col in table.columns.keys()]
+        statement = select(*columns).select_from(table)
+
+        if sel_where:
+            for column_name, conditional in sel_where.items():
+                column_name = table.c[column_name]
+                statement = statement.where(column_name == conditional)
+
+        with self.engine.connect() as con:
+            result = con.execute(statement)
+            result = result.fetchall()
+        df = pd.DataFrame(result, columns=[col.name for col in columns])
+        return df
