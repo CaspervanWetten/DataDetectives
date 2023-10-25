@@ -156,6 +156,7 @@ def display_line_chart(selected_year, clickData):
     fig = px.line(filtered_df, x='Month', y='Temperature', color='Year', title=f'Temperatuur in een linechart van {selected_country} in het jaar {selected_year}')
     return fig
 
+
 print("Hoi")
 if __name__ == '__main__':
     app.run_server(debug=True, host='127.0.0.1', port=7768)
