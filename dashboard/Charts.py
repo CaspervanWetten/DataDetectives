@@ -9,7 +9,7 @@ from dash.dependencies import Input, Output
 app = dash.Dash(__name__)
 
 # Load your CSV file (replace 'your_dataset.csv' with the actual file path)
-df = pd.read_csv('data/electricity.csv')
+df = pd.read_csv('dashboard\data\electricity.csv')
 # print(df.head())
 alpha2_to_alpha3 = {country.alpha_2: country.alpha_3 for country in pycountry.countries}
 
@@ -136,3 +136,4 @@ def update_line_chart(df, selected_year):
 
 if __name__ == '__main__':
     app.run_server(debug=True, host='127.0.0.1', port=7779)
+print("o")

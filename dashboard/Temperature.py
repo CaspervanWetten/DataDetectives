@@ -169,7 +169,7 @@ def RemoveFile(file):
 
 
 # Alles samenkomend ziet het er zo uit:
-def TemperatureDownloader(engine):
+def TemperatureDownloader(db):
     """
     Downloads, processes, and cleans temperature data from the KNMI Climate Explorer.
     """
@@ -200,10 +200,8 @@ def TemperatureDownloader(engine):
             df = df.dropna(subset=['Temperature'])
             df = df[df['Date']>= '2000']
             df['Country'] = country
-            df.to_sql("temperature", engine, if_exists="append", index=False)
-            print(df.head(1))
-            df.to_csv("data/temperature.csv", mode='a', index=False, header=False)
-
+            db._load_data(exists="append", temperature=df)
+            
 
         print("Generating temperature mapping...")
         toClean = [os.path.join(folderPath, file) for file in os.listdir(folderPath) if file.endswith(".txt")]
