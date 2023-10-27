@@ -1,5 +1,6 @@
 import pandas as pd
-from sqlalchemy import create_engine, Table, MetaData, select
+import regex as re
+from sqlalchemy import create_engine, Table, MetaData, select, text
 
 class Database:
     """
@@ -48,18 +49,21 @@ class Database:
         for key, value in kwargs.items():
             value.to_sql(str(key), self.engine, if_exists=exists, index=True)
 
-    def _fetch_data(self, sel_table, *sel_columns, **sel_where):
+    def _fetch_data(self, sel_table, distinct=False, *sel_columns, **sel_where):
         """
         Fetch data from a specified table.
         Args:
             sel_table (str): name of the table
+            distinct=False (bool): selects only the unique items, de
             sel_columns: a list of returned columns, passing none will return all columns
-            sel_where: keyword arguments where column name == conditional, passing no
-            so SELECT Country, GWH FROM electricity WHERE year == 2010 would be  _fetch_data(electricity, Country, GWH, year=2010)
+            sel_where: keyword arguments where column name == conditional, passing no condition will return all columns
+            so SELECT Country, GWH FROM electricity WHERE year == 2010 would be  _fetch_data(electricity, Country, GWH, year="=2010")
         Returns:
             pd.DataFrame: DataFrame containing the fetched data.
             or
-            str: A "failed to execute" string which shows the error
+            List: If only a single column is selected, it'll return an (unordered) list
+            or
+            pd.DataFrame: If the query fails, it'll print an error and return an empty dataframe
         """
         table = Table(sel_table, self.metadata, autoload_with=self.engine)
 
@@ -69,13 +73,42 @@ class Database:
             columns = [table.c[col] for col in table.columns.keys()]
         statement = select(*columns).select_from(table)
 
+        if distinct:
+            statement = statement.distinct()
+
         if sel_where:
             for column_name, conditional in sel_where.items():
-                column_name = table.c[column_name]
-                statement = statement.where(column_name == conditional)
+                column = table.c[column_name]
+                operator_value = re.split(r'([<>=]+)', conditional)
+                operator = operator_value[1].strip()
+                value = operator_value[2].strip()
 
-        with self.engine.connect() as con:
-            result = con.execute(statement)
-            result = result.fetchall()
-        df = pd.DataFrame(result, columns=[col.name for col in columns])
-        return df
+                if not value.isdigit():
+                    statement = statement.where(text(f"'{column_name}' {conditional}"))
+                    continue
+                else:
+                    value = value.strip()
+                if operator == '=':
+                    statement = statement.where(column == value)
+                elif operator == '>':
+                    statement = statement.where(column > value)
+                elif operator == '<':
+                    statement = statement.where(column < value)
+                elif operator == '>=':
+                    statement = statement.where(column >= value)
+                elif operator == '<=':
+                    statement = statement.where(column <= value)
+                elif operator.lower() == 'like':
+                    statement = statement.where(column.like(value))
+                
+        try:
+            with self.engine.connect() as con:
+                result = con.execute(statement)
+                result = result.fetchall()
+            if len(columns) == 1:
+                return [row[0] for row in result]
+            df = pd.DataFrame(result, columns=[col.name for col in columns])
+            return df
+        except Exception as e:
+            print(f"SQL error \n {e}")
+            return pd.DataFrame()

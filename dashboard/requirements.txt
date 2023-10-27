@@ -16,3 +16,4 @@ regex
 eurostat
 wbgapi
 dash
+matplotlib
