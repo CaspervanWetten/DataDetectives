@@ -11,19 +11,20 @@ from plotly.subplots import make_subplots
 # Load the CSV files for both electricity and population
 df = pd.read_csv('dashboard\data\electricity.csv')
 population_df = pd.read_csv('dashboard\data\population.csv')  
-population_df = population_df.sort_values(by=['country', 'Date'])
+population_df = population_df.sort_values(by=['Country', 'Date'])
 temperature_df = pd.read_csv(r"dashboard\data\temperature.csv")
 temperature_df['Date'] = pd.to_datetime(temperature_df['Date'])
 
-# Function to convert alpha-2 country codes to alpha-3
+
+# Function to convert alpha-2 Country codes to alpha-3
 def convert_alpha2_to_alpha3(alpha2_code):
     try:
         return pycountry.countries.get(alpha_2=alpha2_code).alpha_3
     except AttributeError:
         return None
 
-# Apply the alpha-3 country codes
-df['geo\TIME_PERIOD'] = df['geo\TIME_PERIOD'].apply(convert_alpha2_to_alpha3)
+# Apply the alpha-3 Country codes
+df['Country'] = df['Country'].apply(convert_alpha2_to_alpha3)
 
 # Determine the minimum and maximum temperature in the dataset
 min_GWH = df['GWH'].min()
@@ -34,11 +35,12 @@ df['Date'] = pd.to_datetime(df['Date'])
 df['Year'] = df['Date'].dt.year
 df['Month'] = df['Date'].dt.month
 
+# Initialize the Dash app
 app = dash.Dash(__name__)
 
-# Initialize selected year and country
+# Initialize selected year and Country
 selected_year = df['Year'].min()
-selected_country = ""  # Initialize to an empty string
+selected_Country = ""  # Initialize to an empty string
 
 # Get a list of available years
 available_years = df['Year'].unique()
@@ -57,6 +59,21 @@ app.layout = html.Div(children=[
             marks={month: str(month) for month in range(1, 13)},
             step=None,
         ),
+        dcc.Dropdown(
+            id='indic-dropdown',
+            options=[{'label': indic, 'value': indic} for indic in df['indic'].unique()],
+            value=df['indic'].unique()[0],
+            style={'width': '100%'}
+        ),
+        dcc.Dropdown(
+            id='display-mode-dropdown',
+            options=[
+                {'label': 'Total GWH', 'value': 'total'},
+                {'label': 'GWH per capita', 'value': 'per_capita'},
+            ],
+            value='total',  # Default to 'Total GWH'
+            style={'width': '100%'}
+        ),
     ], style={'width': '48%', 'display': 'inline-block'}),
     html.Div(children=[
         dcc.Graph(id='bar-chart1'),
@@ -67,29 +84,65 @@ app.layout = html.Div(children=[
 ])
 
 # Function to create an empty figure with a title
-def create_empty_figure(title='Select a country in the choropleth to view data'):
+def create_empty_figure(title='Select a Country in the choropleth to view data'):
     fig = go.Figure()
     fig.update_layout(title=title, showlegend=False)
     return fig
+
+# Calculate GWH per capita
+def calculate_gwh_per_capita(df, population_df, selected_year, selected_month, selected_indic):
+    # Filter the electricity data
+    filtered_electricity = df[(df['Year'] == selected_year) &
+                              (df['Month'] == selected_month) &
+                              (df['indic'] == selected_indic)]
+    
+    # Filter the population data
+    filtered_population = population_df[(population_df['Date'] == selected_year)]
+    
+    # Merge the filtered datasets on the 'Country' column
+    merged_data = pd.merge(filtered_electricity, filtered_population, on='Country', how='left')
+    
+    # Calculate GWH per capita
+    merged_data['GWH_per_capita'] = merged_data['GWH'] / merged_data['Population']
+    
+    return merged_data
+
+def calculate_total_gwh(df, selected_year, selected_month, selected_indic):
+    filtered_df = df[(df['Year'] == selected_year) &
+                     (df['Month'] == selected_month) &
+                     (df['indic'] == selected_indic)]
+    
+    total_gwh = filtered_df['GWH'].sum()
+    
+    return total_gwh
+
 
 # Update the choropleth figure
 @app.callback(
     Output('choropleth', 'figure'),
     Input('year-radio', 'value'),
-    Input('month-slider', 'value')
+    Input('month-slider', 'value'),
+    Input('indic-dropdown', 'value'),
+    Input('display-mode-dropdown', 'value')
 )
-def update_choropleth(selected_year, selected_month):
-    filtered_df = df[(df['Year'] == selected_year) & (df['Month'] == selected_month)]
-
-    # Compute the minimum and maximum GWH values for the selected month from filtered_df
-    min_GWH = filtered_df['GWH'].min()
-    max_GWH = filtered_df['GWH'].max()
+def update_choropleth(selected_year, selected_month, selected_indic, display_mode):
+    if display_mode == 'total':
+        filtered_df = df[(df['Year'] == selected_year) &
+                         (df['Month'] == selected_month) &
+                         (df['indic'] == selected_indic)]
+        total_gwh = calculate_total_gwh(df, selected_year, selected_month, selected_indic)
+    else:
+        # Calculate GWH per capita
+        merged_data = calculate_gwh_per_capita(df, population_df, selected_year, selected_month, selected_indic)
+        filtered_df = merged_data
+        
+        total_gwh = 0  # You can set a default value here
 
     fig = px.choropleth(filtered_df, 
-                        locations="geo\TIME_PERIOD", 
-                        color="GWH", 
-                        hover_name="geo\TIME_PERIOD",
-                        color_continuous_scale='Viridis'
+                        locations="Country", 
+                        color='GWH' if display_mode == 'total' else 'GWH_per_capita',
+                        hover_name="Country",
+                        color_continuous_scale="Emrld"
                         )
 
     fig.update_geos(
@@ -114,6 +167,13 @@ def update_choropleth(selected_year, selected_month):
 
     return fig
 
+
+
+
+
+
+
+
 # Calculate the average temperature for each month
 average_temperature_by_month = temperature_df.copy()  # Create a copy of the original data
 average_temperature_by_month['Date'] = pd.to_datetime(average_temperature_by_month['Date'])
@@ -126,19 +186,19 @@ average_temperature_by_month['Date'] = pd.to_datetime(average_temperature_by_mon
     Input('choropleth', 'clickData')
 )
 def display_bar_chart(selected_year, selected_month, clickData):
-    selected_country = ""  # Initialize to an empty string
+    selected_Country = ""  # Initialize to an empty string
     if clickData is not None:
-        selected_country = clickData['points'][0]['location']
+        selected_Country = clickData['points'][0]['location']
 
-        # Filter the electricity data for the selected year and country
-        filtered_df = df[(df['Year'] == selected_year) & (df['indic'] == 'Consumption') & (df['geo\TIME_PERIOD'] == selected_country)]
+        # Filter the electricity data for the selected year and Country
+        filtered_df = df[(df['Year'] == selected_year) & (df['indic'] == 'Consumption') & (df['Country'] == selected_Country)]
 
-        # Calculate the average monthly temperature for the selected country and year
-        temperature_data_for_country = calculate_average_monthly_temperature(selected_country, selected_year)
+        # Calculate the average monthly temperature for the selected Country and year
+        temperature_data_for_Country = calculate_average_monthly_temperature(selected_Country, selected_year)
 
         # Extract the months and corresponding average temperatures
-        months = temperature_data_for_country.index
-        temperatures = temperature_data_for_country.values
+        months = temperature_data_for_Country.index
+        temperatures = temperature_data_for_Country.values
 
         # Create a subplot with two Y-axes
         fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -156,7 +216,7 @@ def display_bar_chart(selected_year, selected_month, clickData):
 
         # Update the layout to display both Y-axes
         fig.update_layout(
-            title=f'Electricity Consumption and Temperature in {selected_country} for year {selected_year}',
+            title=f'Electricity Consumption and Temperature in {selected_Country} for year {selected_year}',
             xaxis=dict(title='Month'),
             yaxis=dict(title='GWH', side='left'),
             yaxis2=dict(title='Temperature (°C)', side='right', overlaying='y', showgrid=False),
@@ -175,18 +235,18 @@ def display_bar_chart(selected_year, selected_month, clickData):
     Input('choropleth', 'clickData')
 )
 def display_bar_chart2(selected_year, selected_month, clickData):
-    selected_country = ""  # Initialize to an empty string
+    selected_Country = ""  # Initialize to an empty string
     if clickData is not None:
-        selected_country = clickData['points'][0]['location']
+        selected_Country = clickData['points'][0]['location']
     
-        filtered_df_production = df[(df['Year'] == selected_year) & (df['indic'] == 'Production') & (df['geo\TIME_PERIOD'] == selected_country)]
+        filtered_df_production = df[(df['Year'] == selected_year) & (df['indic'] == 'Production') & (df['Country'] == selected_Country)]
 
-        # Filter the temperature data for the selected country and year
-        temperature_data_for_country = calculate_average_monthly_temperature(selected_country, selected_year)
+        # Filter the temperature data for the selected Country and year
+        temperature_data_for_Country = calculate_average_monthly_temperature(selected_Country, selected_year)
 
         # Extract the months and corresponding average temperatures
-        months = temperature_data_for_country.index
-        temperatures = temperature_data_for_country.values
+        months = temperature_data_for_Country.index
+        temperatures = temperature_data_for_Country.values
 
         fig = go.Figure()
 
@@ -202,7 +262,7 @@ def display_bar_chart2(selected_year, selected_month, clickData):
 
         # Update the layout to display both Y-axes
         fig.update_layout(
-            title=f'Energy Production and Temperature in {selected_country} for year {selected_year}',
+            title=f'Energy Production and Temperature in {selected_Country} for year {selected_year}',
             xaxis=dict(title='Month'),
             yaxis=dict(title='GWH', side='left'),
             yaxis2=dict(title='Temperature (°C)', side='right', overlaying='y', showgrid=False),
@@ -220,16 +280,16 @@ def display_bar_chart2(selected_year, selected_month, clickData):
     Input('choropleth', 'clickData')
 )
 def update_combined_chart(clickData):
-    selected_country = ""
+    selected_Country = ""
     if clickData is not None:
-        selected_country = clickData['points'][0]['location']
+        selected_Country = clickData['points'][0]['location']
 
-        # Filter the GWH data for the selected country and years and sum GWH values for each year
-        filtered_df = df[(df['indic'] == 'Consumption') & (df['geo\TIME_PERIOD'] == selected_country)]
+        # Filter the GWH data for the selected Country and years and sum GWH values for each year
+        filtered_df = df[(df['indic'] == 'Consumption') & (df['Country'] == selected_Country)]
         gwh_by_year = filtered_df.groupby('Year')['GWH'].sum().reset_index()
 
-        # Filter the population data for the selected country and years
-        population_data = population_df[population_df['country'] == selected_country]
+        # Filter the population data for the selected Country and years
+        population_data = population_df[population_df['Country'] == selected_Country]
 
         # Normalize the GWH data between 0 and 1
         max_gwh = gwh_by_year['GWH'].max()
@@ -264,7 +324,7 @@ def update_combined_chart(clickData):
         fig.add_trace(line_trace)
 
         fig.update_layout(
-            title=f'Energy Consumption versus Population in {selected_country}',
+            title=f'Energy Consumption versus Population in {selected_Country}',
             xaxis_title='Year',
             yaxis_title='Normalized Values (0-1)',
         )
@@ -279,12 +339,12 @@ def update_combined_chart(clickData):
     Input('choropleth', 'clickData')
 )
 def update_combined_chart2(clickData):
-    selected_country = ""
+    selected_Country = ""
     if clickData is not None:
-        selected_country = clickData['points'][0]['location']
+        selected_Country = clickData['points'][0]['location']
 
-        filtered_df_production = df[(df['indic'] == 'Production') & (df['geo\TIME_PERIOD'] == selected_country)]
-        filtered_df_consumption = df[(df['indic'] == 'Consumption') & (df['geo\TIME_PERIOD'] == selected_country)]
+        filtered_df_production = df[(df['indic'] == 'Production') & (df['Country'] == selected_Country)]
+        filtered_df_consumption = df[(df['indic'] == 'Consumption') & (df['Country'] == selected_Country)]
 
         # Group and aggregate production and consumption data by year
         production_by_year = filtered_df_production.groupby('Year')['GWH'].sum().reset_index()
@@ -312,7 +372,7 @@ def update_combined_chart2(clickData):
         fig.add_trace(consumption_trace)
 
         fig.update_layout(
-            title=f'Energy Production and Consumption in {selected_country} Over the Years',
+            title=f'Energy Production and Consumption in {selected_Country} Over the Years',
             xaxis_title='Year',
             yaxis_title='GWH',
         )
@@ -322,17 +382,18 @@ def update_combined_chart2(clickData):
     return fig
 
 # Calculate the average monthly temperature for each month in the selected year
-def calculate_average_monthly_temperature(selected_country, selected_year):
-    # Filter the temperature data for the selected country and year
-    temperature_data_for_country = average_temperature_by_month[
-        (average_temperature_by_month['Country'] == selected_country) &
+def calculate_average_monthly_temperature(selected_Country, selected_year):
+    # Filter the temperature data for the selected Country and year
+    temperature_data_for_Country = average_temperature_by_month[
+        (average_temperature_by_month['Country'] == selected_Country) &
         (average_temperature_by_month['Date'].dt.year == selected_year)
     ]
 
     # Group the data by month and calculate the average temperature
-    average_monthly_temperature = temperature_data_for_country.groupby(temperature_data_for_country['Date'].dt.month)['Temperature'].mean()
+    average_monthly_temperature = temperature_data_for_Country.groupby(temperature_data_for_Country['Date'].dt.month)['Temperature'].mean()
 
     return average_monthly_temperature
 
 if __name__ == '__main__':
     app.run_server(debug=True, host='127.0.0.1', port=7767)
+
