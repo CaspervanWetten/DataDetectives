@@ -1,7 +1,7 @@
 import pandas as pd
 import regex as re
 from sqlalchemy import create_engine, Table, MetaData, select, text
-from Electricty import MonthlyElectricity
+from Electricty import MonthlyElectricity, TypesOfEnergy
 from Temperature import TemperatureDownloader
 from Population import DownloadPopulationData
 
@@ -30,12 +30,14 @@ class Database:
         self.metadata = MetaData()
 
     def _update_database(self):
-        print("dropping old data")
+        print("dropping old data...")
         self._drop_all_tables()
         print("Downloading new population data...")
         self._load_data(population=DownloadPopulationData())
         print("Downloading new monthly electricity data...")
-        self._load_data(electricity=MonthlyElectricity())
+        self._load_data(electricity_consumption=MonthlyElectricity())
+        print("Downloading new segregated electricity data...") #shit am I racist????
+        self._load_data(electricity_types=TypesOfEnergy())
         #The temperature data appends the database, hence why it passes the database as a self object
         TemperatureDownloader(db=self)
 
@@ -44,17 +46,16 @@ class Database:
         """
         Drops all tables in the database
         """
-        with self.engine.connect() as con:
-            self.metadata.reflect(bind=self.engine)
-            for table in reversed(self.metadata.sorted_tables):
-                table.drop(self.engine)
+        self.metadata.reflect(bind=self.engine)
+        for table in reversed(self.metadata.sorted_tables):
+            table.drop(self.engine)
 
     def _load_data(self, exists="replace", **kwargs):
         """
         Load data into the database.
         Args:
-            exists (str): If table already exists, 'replace' to replace it, 'append' to append data or 'fail' to raise a ValueError
-            **kwargs: keyword arguments, "temperature=df" will make a table called [temperature] with [df] as values
+            exists (str): What to do if a table already exists, 'replace' to replace it, 'append' to append data or 'fail' to raise a ValueError
+            **kwargs: keyword arguments, "temperature=df" will make a table called [temperature] with [df] as the table
         """
         for key, value in kwargs.items():
             value.to_sql(str(key), self.engine, if_exists=exists, index=True)
@@ -65,8 +66,8 @@ class Database:
         Args:
             sel_table (str): name of the table
             sel_columns: a list of returned columns, passing none will return all columns
-            sel_where: keyword arguments where column name == conditional, passing no condition will return all columns
-            so SELECT Country, GWH FROM electricity WHERE year == 2010 would be  _fetch_data(electricity, Country, GWH, year="=2010")
+            sel_where: keyword arguments where column name == conditional, passing no condition will return all columns. Can also pass distinct="true" to get all unique values;
+            The query "SELECT Country, GWH FROM electricity WHERE year == 2010" would be  _fetch_data(electricity, Country, GWH, year="=2010")
         Returns:
             pd.DataFrame: DataFrame containing the fetched data.
             or
@@ -87,6 +88,8 @@ class Database:
 
         if sel_where:
             for column_name, conditional in sel_where.items():
+                if "distinct" in conditional:
+                    continue
                 column = table.c[column_name]
                 operator_value = re.split(r'([<>=]+)', conditional)
                 operator = operator_value[1].strip()
@@ -119,5 +122,5 @@ class Database:
             df = pd.DataFrame(result, columns=[col.name for col in columns])
             return df
         except Exception as e:
-            print(f"SQL error \n {e}")
+            print(f"Quit query: \n {statement} \n with the following SQL error: \n {e}")
             return pd.DataFrame()
