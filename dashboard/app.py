@@ -29,8 +29,15 @@ et_df = db._fetch_data("electricity_types")
 pop_df = db._fetch_data("population")
 tmp_df = db._fetch_data("temperature")
 
-df = db._fetch_data("electricity_consumption", False, "Country", "GWH", Year="=2010")
-possible_years = sorted(db._fetch_data("electricity_consumption", True, "Year"), key=int)
+print(ec_df.head(2))
+print(et_df.head(2))
+print(pop_df.head(2))
+print(tmp_df.head(2))
+
+df = db._fetch_data("electricity_consumption", "Country", "GWH", Year="=2010")
+print(df.head(2))
+possible_years = sorted(db._fetch_data("electricity_consumption", "Year", distinct=True), key=int)
+print(possible_years)
 selected_year = 2018
 selected_indicator = "consumption"
 
