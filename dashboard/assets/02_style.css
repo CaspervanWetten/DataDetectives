@@ -16,11 +16,29 @@ p {
 
 .choropleth {
     float: left;
-    width: 55%;
-    margin-top: 2%;
     height: fit-content;
-  }
+    margin-top: 2%;
+    margin-left: 3%;
+    padding-right: 8px;
+    border: thin solid black;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+    border-radius: 50px;
+    overflow: hidden;
+    background: #fff;
 
-.rondo {
+}
+
+.GWH {
+    float: left;
+    margin-left: 8%;
+    font-size: x-large;
     
+}
+
+.choroslider{
+    float: bottom;
+    margin-top: 3%;
+    margin-left: 8%;
+    margin-right: 25%;
+
 }
