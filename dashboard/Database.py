@@ -1,6 +1,10 @@
 import pandas as pd
 import regex as re
 from sqlalchemy import create_engine, Table, MetaData, select, text
+from Electricty import MonthlyElectricity
+from Temperature import TemperatureDownloader
+from Population import DownloadPopulationData
+
 
 class Database:
     """
@@ -25,19 +29,25 @@ class Database:
         self.engine = create_engine("postgresql://student:infomdss@db_dashboard:5432/dashboard")
         self.metadata = MetaData()
 
-    def _drop_data(self, *tables):
+    def _update_database(self):
+        print("dropping old data")
+        self._drop_all_tables()
+        print("Downloading new population data...")
+        self._load_data(population=DownloadPopulationData())
+        print("Downloading new monthly electricity data...")
+        self._load_data(electricity=MonthlyElectricity())
+        #The temperature data appends the database, hence why it passes the database as a self object
+        TemperatureDownloader(db=self)
+
+
+    def _drop_all_tables(self):
         """
-        Drop specified tables from the database.
-        Args:
-            *tables: Variable number of table names to drop.
+        Drops all tables in the database
         """
-        with self.engine.connect() as connection:
-            for table in tables:
-                query = f"DROP TABLE IF EXISTS {table} CASCADE"
-                try:
-                    connection.execute(query)
-                except Exception as e:
-                    print(f"An error occurred while dropping table {table}:\n{e}")
+        with self.engine.connect() as con:
+            self.metadata.reflect(bind=self.engine)
+            for table in reversed(self.metadata.sorted_tables):
+                table.drop(self.engine)
 
     def _load_data(self, exists="replace", **kwargs):
         """
@@ -49,12 +59,11 @@ class Database:
         for key, value in kwargs.items():
             value.to_sql(str(key), self.engine, if_exists=exists, index=True)
 
-    def _fetch_data(self, sel_table, distinct=False, *sel_columns, **sel_where):
+    def _fetch_data(self, sel_table, *sel_columns, **sel_where):
         """
         Fetch data from a specified table.
         Args:
             sel_table (str): name of the table
-            distinct=False (bool): selects only the unique items, de
             sel_columns: a list of returned columns, passing none will return all columns
             sel_where: keyword arguments where column name == conditional, passing no condition will return all columns
             so SELECT Country, GWH FROM electricity WHERE year == 2010 would be  _fetch_data(electricity, Country, GWH, year="=2010")
@@ -73,7 +82,7 @@ class Database:
             columns = [table.c[col] for col in table.columns.keys()]
         statement = select(*columns).select_from(table)
 
-        if distinct:
+        if sel_where.pop('distinct', ''):
             statement = statement.distinct()
 
         if sel_where:
