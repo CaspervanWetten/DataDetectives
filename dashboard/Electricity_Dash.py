@@ -91,38 +91,31 @@ grouped = df_pivot.groupby(['energy', 'year'])['consumption'].sum().unstack()
 
 energy_groups = df2.groupby('energy')
 
-# Initialize the pieplot
-# Create an interactive pie chart with a dropdown for years
-fig = px.pie(df2, names='energy', values='2011', title='Energy Source Distribution in EU')
 
-# Get the list of available years
-available_years = [str(year) for year in range(2011, 2022)]
+app = dash.Dash(__name__)
 
-# Create a list of buttons for each available year
-buttons = [
-    {
-        'method': 'restyle',
-        'label': year,
-        'args': [{'values': [df2[year]], 'title.text': f'Energy Source Distribution in {year}'}]
-    }
-    for year in available_years
-]
+# Define the layout of the Dash app
+app.layout = html.Div([
+    dcc.Graph(id='energy-pie-chart'),
+    dcc.Dropdown(
+        id='year-dropdown',
+        options=[
+            {'label': year, 'value': year}
+            for year in df2.columns if year.isnumeric()
+        ],
+        value='2011'
+    )
+])
 
-# Update the layout to include a dropdown menu for years
-fig.update_layout(
-    updatemenus=[
-        {
-            'buttons': buttons,
-            'direction': 'down',
-            'showactive': True,
-            'x': 0.1,
-            'xanchor': 'left',
-            'y': 1.1,
-            'yanchor': 'top',
-        },
-    ]
+# Define a callback function to update the pie chart based on the selected year
+@app.callback(
+    Output('energy-pie-chart', 'figure'),
+    Input('year-dropdown', 'value')
 )
+def update_pie_chart(selected_year):
+    fig = px.pie(df2, names='energy', values=selected_year, title=f'Energy Source Distribution in {selected_year}')
+    return fig
 
-# Show the interactive pie chart
-fig.show()
+if __name__ == '__main__':
+    app.run_server(debug=True)
 
