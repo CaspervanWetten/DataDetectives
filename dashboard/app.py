@@ -23,18 +23,6 @@ app.description="Dit is een omschrijving 0_O"
 
 db=Database()
 
-
-LIST = os.listdir('C:\\Users\\valke\\OneDrive\\Documenten\\GitHub\\DataDetectives\\dashboard\\data')
-
-for file in LIST:
-    path = os.path.join('C:\\Users\\valke\\OneDrive\\Documenten\\GitHub\\DataDetectives\\dashboard\\data', file)
-    with open(path):
-        df = pd.read_csv(path)
-    a = file.split(".")[0]
-    db._load_data(a=df)
-    print(file.split(".")[0])    
-    
-    
     
 
 population_df = db._fetch_data("population")
@@ -51,4 +39,4 @@ app.layout = html.Div([
 
 if __name__ == '__main__':
     print("Started")
-    app.run_server(debug=True, host='172.19.0.3', port=5000)
+    app.run_server(debug=True, host="0.0.0.0", port=5000)
