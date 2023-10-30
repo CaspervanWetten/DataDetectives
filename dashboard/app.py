@@ -2,15 +2,12 @@ import dash
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from Electricty import MonthlyElectricity
-from Temperature import TemperatureDownloader
-from Population import DownloadPopulationData
-from os import listdir
 from dash import dcc
 from dash import html
 from dash.dependencies import Input, Output
 from Charts import Choropleth
 from Database import Database
+
 
 app = dash.Dash(__name__)
 server = app.server
@@ -20,9 +17,17 @@ app.title="We testen wat!"
 app.description="Dit is een omschrijving 0_O"
 
 db = Database()
+
+if True:
+    db._update_database()
+
+print(db._fetch_data("electricity").head(2))
+print(db._fetch_data("population").head(2))
+print(db._fetch_data("temperature").head(2))
+
+
 df = db._fetch_data("electricity", False, "Country", "GWH", Year="=2010")
 possible_years = sorted(db._fetch_data("electricity", True, "Year"), key=int)
-print(df.head())
 selected_year = 2018
 selected_indicator = "consumption"
 
