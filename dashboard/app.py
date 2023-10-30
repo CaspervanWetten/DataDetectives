@@ -19,13 +19,12 @@ app.scripts.config.serve_locally = True
 app.title="We testen wat!"
 app.description="Dit is een omschrijving 0_O"
 
-# db = Database()
-# df = db._fetch_data("electricity", False, "Country", "GWH", Year="=2010")
-# possible_years = sorted(db._fetch_data("electricity", True, "Year"), key=int)
-# print(df.head())
+db = Database()
+df = db._fetch_data("electricity", False, "Country", "GWH", Year="=2010")
+possible_years = sorted(db._fetch_data("electricity", True, "Year"), key=int)
+print(df.head())
 selected_year = 2018
 selected_indicator = "consumption"
-df = pd.DataFrame()
 
 app.layout = html.Div(children=[
     html.H1('Hello Dash!'),
@@ -54,7 +53,8 @@ app.layout = html.Div(children=[
 if __name__ == '__main__':
     print("Started")
     app.run_server(debug=True, host='0.0.0.0', port=5000)
-    # http://127.0.0.1:5000/
+    # Casper: http://172.19.0.3:5000/
+    # Dagmar: http://127.0.0.1:5000/
 
     
 # marks = []
