@@ -1,6 +1,6 @@
 import pandas as pd
-import dash
 import pycountry
+import dash
 from dash import dcc
 from dash import html
 import plotly.express as px
@@ -60,81 +60,39 @@ def update_choropleth(df, selected_year, selected_indic):
     filtered_df['geo\\TIME_PERIOD'] = filtered_df['geo\\TIME_PERIOD'].map(alpha2_to_alpha3)
     print(filtered_df.head())
 
-    # Create a choropleth map based on the filtered data
-    fig = px.choropleth(filtered_df, 
-                        locations="geo\TIME_PERIOD", 
-                        color="GWH",  # Use the selected indic column
-                        hover_name="geo\TIME_PERIOD", 
-                        # hover_data=[selected_indic, "GWH"],  # Display GWH in hover data
-                        color_continuous_scale='Viridis',  
-                        range_color=(min_gwh, max_gwh))
+def Choropleth(df):
+    fig = px.choropleth(df, 
+                        locations="Country",
+                        color="GWH", 
+                        hover_name="Country",
+                        color_continuous_scale='Viridis',
+                        scope="europe"
+                        )
 
-    # Customize the map layout and title
     fig.update_geos(
-        visible=True, resolution=50, scope="europe",
+        visible=True, resolution=50,
         showcountries=True, countrycolor="Black",
-        showsubunits=True, subunitcolor="Blue"
+        fitbounds="locations",
+        center=dict(lat=51.1657, lon=10.4515),
+        projection_scale=15         
     )
 
     fig.update_layout(
+        autosize=False,
         geo=dict(
-            showframe=False,
             showcoastlines=False,
             projection_type='equirectangular'
         ),
-        height=1000, margin={"r": 0, "t": 0, "l": 0, "b": 0}
-    )
-
-    return fig.to_html(full_html=False)
-
-# Update the pie chart based on selected year
-@app.callback(
-    Output('pie-chart', 'figure'),
-    Input('year-radio', 'value')
-)
-def update_pie_chart(df, selected_year):
-    # Filter the dataset based on the selected year
-    filtered_df = df[(df['Year'] == selected_year)]
-
-    # Create a pie chart based on the filtered data
-    fig = px.pie(filtered_df, names='geo\TIME_PERIOD', values=selected_indic,  # Use the selected indic column
-                 title=f'GWH Distribution for {selected_year}')
+        margin = dict(
+                l=0,
+                r=0,
+                b=0,
+                t=0,
+                pad=4,
+                autoexpand=True
+            ),
+        width=800,
+        dragmode=False
+        )
 
     return fig
-
-# Update the histogram based on selected year
-@app.callback(
-    Output('histogram', 'figure'),
-    Input('year-radio', 'value')
-)
-def update_histogram(df, selected_year):
-    # Filter the dataset based on the selected year
-    filtered_df = df[(df['Year'] == selected_year)]
-
-    # Create a histogram based on the filtered data
-    fig = px.histogram(filtered_df, x=selected_indic,  # Use the selected indic column
-                      title=f'GWH Histogram for {selected_year}')
-
-    return fig
-
-# Update the line chart based on selected year
-@app.callback(
-    Output('line-chart', 'figure'),
-    Input('year-radio', 'value')
-)
-def update_line_chart(df, selected_year):
-    # Filter the dataset based on the selected year
-    filtered_df = df[(df['Year'] == selected_year)]
-
-    # Create a line chart based on the filtered data
-    fig = px.line(filtered_df, x='geo\TIME_PERIOD', y=selected_indic,  # Use the selected indic column
-                 title=f'GWH Line Chart for {selected_year}')
-    
-    fig.to
-
-    return fig
-
-
-if __name__ == '__main__':
-    app.run_server(debug=True, host='127.0.0.1', port=7779)
-print("o")
