@@ -107,20 +107,3 @@ print(df_pivot)
 grouped = df_pivot.groupby(['energy', 'year'])['consumption'].sum().unstack()
 
 energy_groups = df2.groupby('energy')
-
-# # Initialize the plot
-# plt.figure()
-
-# for name, group in energy_groups:
-#     plt.bar(group.columns[2:], group.iloc[0, 2:], label=name)
-
-# # Customize the plot
-# plt.xlabel('Years')
-# plt.ylabel('Energy Consumption (GWh)')
-# plt.title('Energy Consumption by Type (2011-2021)')
-# plt.xticks(rotation=45)
-# plt.legend()
-
-# # Show the plot
-# plt.show()
-
