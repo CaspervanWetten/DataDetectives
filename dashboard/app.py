@@ -21,6 +21,9 @@ db = Database()
 if False:
     db._update_database()
 
+if False:
+    db._update_database_csv()
+
 ec_df = db._fetch_data("electricity_consumption")
 et_df = db._fetch_data("electricity_types")
 pop_df = db._fetch_data("population")

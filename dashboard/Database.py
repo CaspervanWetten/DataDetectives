@@ -41,6 +41,17 @@ class Database:
         #The temperature data appends the database, hence why it passes the database as a self object
         TemperatureDownloader(db=self)
 
+    def _update_database_csv(self):
+        print("dropping old data...")
+        self._drop_all_tables()
+        print("Getting population data...")
+        self._load_data(population=pd.read_csv("csv/population.csv"))
+        print("Getting monthly electricity data...")
+        self._load_data(electricity_consumption=pd.read_csv("csv/electricity_consumption.csv"))
+        print("Getting segregated electricity data...")
+        self._load_data(electricity_types=pd.read_csv("csv/electricity_types.csv"))
+        print("Getting temperature data...") 
+        self._load_data(temperature=pd.read_csv("csv/temperature.csv"))
 
     def _drop_all_tables(self):
         """
