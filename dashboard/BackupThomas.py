@@ -10,7 +10,7 @@ from plotly.subplots import make_subplots
 import eurostat as es
 
 # Load the CSV files for both electricity and population
-df = pd.read_csv('dashboard\data\electricity.csv')
+electricity_df = pd.read_csv('dashboard\data\electricity.csv')
 population_df = pd.read_csv('dashboard\data\population.csv')  
 population_df = population_df.sort_values(by=['Country', 'Date'])
 temperature_df = pd.read_csv(r"dashboard\data\temperature.csv")
@@ -25,26 +25,26 @@ def convert_alpha2_to_alpha3(alpha2_code):
         return None
 
 # Apply the alpha-3 Country codes
-df['Country'] = df['Country'].apply(convert_alpha2_to_alpha3)
+electricity_df['Country'] = electricity_df['Country'].apply(convert_alpha2_to_alpha3)
 
 # Determine the minimum and maximum temperature in the dataset
-min_GWH = df['GWH'].min()
-max_GWH = df['GWH'].max()
+min_GWH = electricity_df['GWH'].min()
+max_GWH = electricity_df['GWH'].max()
 
 # Extract year and month from the date
-df['Date'] = pd.to_datetime(df['Date'])
-df['Year'] = df['Date'].dt.year
-df['Month'] = df['Date'].dt.month
+electricity_df['Date'] = pd.to_datetime(electricity_df['Date'])
+electricity_df['Year'] = electricity_df['Date'].dt.year
+electricity_df['Month'] = electricity_df['Date'].dt.month
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
 
 # Initialize selected year and Country
-selected_year = df['Year'].min()
+selected_year = electricity_df['Year'].min()
 selected_Country = ""  # Initialize to an empty string
 
 # Get a list of available years
-available_years = df['Year'].unique()
+available_years = electricity_df['Year'].unique()
 
 
 
@@ -146,8 +146,8 @@ app.layout = html.Div(children=[
         ),
         dcc.Dropdown(
             id='indic-dropdown',
-            options=[{'label': indic, 'value': indic} for indic in df['indic'].unique()],
-            value=df['indic'].unique()[0],
+            options=[{'label': indic, 'value': indic} for indic in electricity_df['indic'].unique()],
+            value=electricity_df['indic'].unique()[0],
             style={'width': '100%'}
         ),
         dcc.Dropdown(
@@ -186,11 +186,11 @@ def create_empty_figure(title='Select a Country in the choropleth to view data')
     return fig
 
 # Calculate GWH per capita
-def calculate_gwh_per_capita(df, population_df, selected_year, selected_month, selected_indic):
+def calculate_gwh_per_capita(electricity_df, population_df, selected_year, selected_month, selected_indic):
     # Filter the electricity data
-    filtered_electricity = df[(df['Year'] == selected_year) &
-                              (df['Month'] == selected_month) &
-                              (df['indic'] == selected_indic)]
+    filtered_electricity = electricity_df[(electricity_df['Year'] == selected_year) &
+                              (electricity_df['Month'] == selected_month) &
+                              (electricity_df['indic'] == selected_indic)]
     
     # Filter the population data
     filtered_population = population_df[(population_df['Date'] == selected_year)]
@@ -203,10 +203,10 @@ def calculate_gwh_per_capita(df, population_df, selected_year, selected_month, s
     
     return merged_data
 
-def calculate_total_gwh(df, selected_year, selected_month, selected_indic):
-    filtered_df = df[(df['Year'] == selected_year) &
-                     (df['Month'] == selected_month) &
-                     (df['indic'] == selected_indic)]
+def calculate_total_gwh(electricity_df, selected_year, selected_month, selected_indic):
+    filtered_df = electricity_df[(electricity_df['Year'] == selected_year) &
+                     (electricity_df['Month'] == selected_month) &
+                     (electricity_df['indic'] == selected_indic)]
     
     total_gwh = filtered_df['GWH'].sum()
     
@@ -223,13 +223,13 @@ def calculate_total_gwh(df, selected_year, selected_month, selected_indic):
 )
 def update_choropleth(selected_year, selected_month, selected_indic, display_mode):
     if display_mode == 'total':
-        filtered_df = df[(df['Year'] == selected_year) &
-                         (df['Month'] == selected_month) &
-                         (df['indic'] == selected_indic)]
-        total_gwh = calculate_total_gwh(df, selected_year, selected_month, selected_indic)
+        filtered_df = electricity_df[(electricity_df['Year'] == selected_year) &
+                         (electricity_df['Month'] == selected_month) &
+                         (electricity_df['indic'] == selected_indic)]
+        total_gwh = calculate_total_gwh(electricity_df, selected_year, selected_month, selected_indic)
     else:
         # Calculate GWH per capita
-        merged_data = calculate_gwh_per_capita(df, population_df, selected_year, selected_month, selected_indic)
+        merged_data = calculate_gwh_per_capita(electricity_df, population_df, selected_year, selected_month, selected_indic)
         filtered_df = merged_data
         
         total_gwh = 0  # You can set a default value here
@@ -287,7 +287,7 @@ def display_bar_chart(selected_year, selected_month, clickData):
         selected_Country = clickData['points'][0]['location']
 
         # Filter the electricity data for the selected year and Country
-        filtered_df = df[(df['Year'] == selected_year) & (df['indic'] == 'Consumption') & (df['Country'] == selected_Country)]
+        filtered_df = electricity_df[(electricity_df['Year'] == selected_year) & (electricity_df['indic'] == 'Consumption') & (electricity_df['Country'] == selected_Country)]
 
         # Calculate the average monthly temperature for the selected Country and year
         temperature_data_for_Country = calculate_average_monthly_temperature(selected_Country, selected_year)
@@ -335,7 +335,7 @@ def display_bar_chart2(selected_year, selected_month, clickData):
     if clickData is not None:
         selected_Country = clickData['points'][0]['location']
     
-        filtered_df_production = df[(df['Year'] == selected_year) & (df['indic'] == 'Production') & (df['Country'] == selected_Country)]
+        filtered_df_production = electricity_df[(electricity_df['Year'] == selected_year) & (electricity_df['indic'] == 'Production') & (electricity_df['Country'] == selected_Country)]
 
         # Filter the temperature data for the selected Country and year
         temperature_data_for_Country = calculate_average_monthly_temperature(selected_Country, selected_year)
@@ -381,7 +381,7 @@ def update_combined_chart(clickData):
         selected_Country = clickData['points'][0]['location']
 
         # Filter the GWH data for the selected Country and years and sum GWH values for each year
-        filtered_df = df[(df['indic'] == 'Consumption') & (df['Country'] == selected_Country)]
+        filtered_df = electricity_df[(electricity_df['indic'] == 'Consumption') & (electricity_df['Country'] == selected_Country)]
         gwh_by_year = filtered_df.groupby('Year')['GWH'].sum().reset_index()
 
         # Filter the population data for the selected Country and years
@@ -439,8 +439,8 @@ def update_combined_chart2(clickData):
     if clickData is not None:
         selected_Country = clickData['points'][0]['location']
 
-        filtered_df_production = df[(df['indic'] == 'Production') & (df['Country'] == selected_Country)]
-        filtered_df_consumption = df[(df['indic'] == 'Consumption') & (df['Country'] == selected_Country)]
+        filtered_df_production = electricity_df[(electricity_df['indic'] == 'Production') & (electricity_df['Country'] == selected_Country)]
+        filtered_df_consumption = electricity_df[(electricity_df['indic'] == 'Consumption') & (electricity_df['Country'] == selected_Country)]
 
         # Group and aggregate production and consumption data by year
         production_by_year = filtered_df_production.groupby('Year')['GWH'].sum().reset_index()
