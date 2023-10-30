@@ -52,7 +52,7 @@ app.layout = html.Div(children=[
 
 if __name__ == '__main__':
     print("Started")
-    app.run_server(debug=True, host='0.0.0.0', port=5000)
+    app.run_server(debug=False, host="0.0.0.0", port=8080)
     # Casper: http://172.19.0.3:5000/
     # Dagmar: http://127.0.0.1:5000/
 

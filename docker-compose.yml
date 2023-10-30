@@ -7,7 +7,7 @@ services:
             context: .
             dockerfile: dashboard/Dockerfile_dashboard  # Specify the unique Dockerfile name I'm so not sure how this works
         ports:
-            - 8080:5000
+            - 8080:8080
         volumes:
             - ./dashboard:/app
             - ./data:/data
