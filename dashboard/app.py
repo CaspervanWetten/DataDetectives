@@ -7,6 +7,7 @@ from dash import html
 from dash.dependencies import Input, Output
 from Charts import Choropleth
 from Database import Database
+from time import sleep
 
 
 app = dash.Dash(__name__)
@@ -14,20 +15,19 @@ server = app.server
 app.css.config.serve_locally = True
 app.scripts.config.serve_locally = True
 app.title="We testen wat!"
-app.description="Dit is een omschrijving 0_O"
 
 db = Database()
 
-if True:
+if False:
     db._update_database()
 
-print(db._fetch_data("electricity").head(2))
-print(db._fetch_data("population").head(2))
-print(db._fetch_data("temperature").head(2))
+ec_df = db._fetch_data("electricity_consumption")
+et_df = db._fetch_data("electricity_types")
+pop_df = db._fetch_data("population")
+tmp_df = db._fetch_data("temperature")
 
-
-df = db._fetch_data("electricity", False, "Country", "GWH", Year="=2010")
-possible_years = sorted(db._fetch_data("electricity", True, "Year"), key=int)
+df = db._fetch_data("electricity_consumption", False, "Country", "GWH", Year="=2010")
+possible_years = sorted(db._fetch_data("electricity_consumption", True, "Year"), key=int)
 selected_year = 2018
 selected_indicator = "consumption"
 
