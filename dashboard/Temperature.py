@@ -28,8 +28,7 @@ def DownloadFile(url, write_location):
     if response.status_code == 200:
         total_size = int(response.headers.get('content-length', 0))
         block_size = 1024
-        progress_bar = tqdm(total=total_size, unit='B', unit_scale=True, desc="Downloading data")
-        folder_path = os.path.dirname(write_location)
+        progress_bar = tqdm(total=total_size, unit='B', unit_scale=True, desc="Downloading new temperature data")
         with open(write_location, 'wb') as file:
             for data in response.iter_content(block_size):
                 progress_bar.update(len(data))
