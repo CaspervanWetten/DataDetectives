@@ -60,6 +60,7 @@ class Database:
         self.metadata.reflect(bind=self.engine)
         for table in reversed(self.metadata.sorted_tables):
             table.drop(self.engine)
+        self.metadata = MetaData()
 
     def _load_data(self, exists="replace", **kwargs):
         """
@@ -70,6 +71,7 @@ class Database:
         """
         for key, value in kwargs.items():
             value.to_sql(str(key), self.engine, if_exists=exists, index=True)
+        self.metadata = MetaData()
 
     def _fetch_data(self, sel_table, *sel_columns, **sel_where):
         """

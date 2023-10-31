@@ -182,7 +182,7 @@ def RemoveFile(file):
 
 
 # Alles samenkomend ziet het er zo uit:
-def TemperatureDownloader(csv=False):
+def TemperatureDownloader(db, csv=False):
     """
     Downloads, processes, and cleans temperature data from the KNMI Climate Explorer.
     """
@@ -220,7 +220,7 @@ def TemperatureDownloader(csv=False):
             df['month'] = df['date'].dt.month
             df['country'] = country #Add a country column with the value of the current country
             df = df[["country", "year", "month", "temperature"]] #I wanted to have all dataframes in (more or less) the same order. No I'm not autistic and thinking such questions is rude >:£
-            # db._load_data(exists="append", temperature=df) #Append the currently existing temperature table (which will be empty at the start of the loop) with the newly generated dataframe
+            db._load_data(exists="append", temperature=df) #Append the currently existing temperature table (which will be empty at the start of the loop) with the newly generated dataframe
             
         toClean = [os.path.join(folderPath, file) for file in os.listdir(folderPath) if file.endswith(".txt") or file.endswith(".zip")] #Remove the leftover .txt and .zip files, which total to about ~4 gigs
         p_map(RemoveFile, toClean, desc="Cleaning leftover files")
@@ -231,5 +231,3 @@ def TemperatureDownloader(csv=False):
     except Exception as e:
         print(f"quit with \n {e} \n as error")
 
-
-TemperatureDownloader()

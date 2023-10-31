@@ -5,7 +5,6 @@ import plotly.express as px
 from dash import dcc
 from dash import html
 from dash.dependencies import Input, Output
-from Charts import Choropleth
 from Database import Database
 from time import sleep
 
@@ -18,7 +17,7 @@ app.title="We testen wat!"
 
 db = Database()
 
-if True:
+if False:
     db._update_database()
 
 if False:
@@ -41,12 +40,53 @@ print(possible_years)
 selected_year = 2018
 selected_indicator = "consumption"
 
+# @app.callback(
+#     Output('selected_country_id', 'selected_country'),
+#     Input('choropleth', 'clickData')
+# )
+# def get_country(clickData):
+#     #code
+
+# @app.callback(
+#     Output("selected_year", "selected_year")
+#     Input("IETS`")
+# )
+# def get_year(iets):
+
+
+# @app.callback(
+#     Output("dataframe")
+#     Input("selected_country_ID", "selected_country")
+
+# )
+# def get_dataframe(selected_year, selected_country,):
+#     sql = f"""
+
+#         """
+#     db._fetch_data(sql)
+
+
+# @app.calllback(
+#         Output("")
+#         Input(Dataframe)
+# )
+# def update_choropleth():
+
+
+
+
+
+
+
+
+
+
 app.layout = html.Div(children=[
     html.H1('Hello Dash!'),
     html.Div(className='row', children=[
         html.Div(className='col-8', children=[
             html.Div(f'GWH {selected_indicator} distribution in Europe for {selected_year}', className="GWH"),
-            dcc.Graph(className="choropleth", id="choropleth", figure=Choropleth(df))
+            dcc.Graph(className="choropleth", id="choropleth", figure=update_choropleth(df))
         ]),
         html.Div('Lorem ipsum 2', className='col-4')
     ]),
@@ -55,21 +95,8 @@ app.layout = html.Div(children=[
     ])
 ])
 
-
-
-# @app.callback(
-#     Output(component_id='choropleth'),
-#     Input(component_id='chloroslider', component_property="value")
-# )
-# def update_choropleth(selected_year):
-#     df = db._fetch_data("electricity", False, "Country", "GWH", Year=f"={selected_year}")
-#     Choropleth(df)
-
 if __name__ == '__main__':
     print("Started")
-    app.run_server(debug=False, host="0.0.0.0", port=8080)
-    # Casper: http://172.19.0.3:5000/
-    # Dagmar: http://127.0.0.1:5000/
-
-    
-# marks = []
+    app.run_server(debug=True, host="172.19.0.3", port=8080)
+    # Casper: 172.19.0.3
+    # Dagmar: 127.0.0.1
