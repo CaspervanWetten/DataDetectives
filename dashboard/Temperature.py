@@ -6,7 +6,8 @@ import pandas as pd
 import regex as re
 from tqdm import tqdm
 from p_tqdm import p_map
-
+import requests
+import time
 # Dit zijn meer algehele, saaie helper functies:
 
 def FilterEmptyDict(input_dict):
@@ -17,26 +18,39 @@ def FilterEmptyDict(input_dict):
     """
     return {key: val for key, val in input_dict.items() if val}
 
-def DownloadFile(url, write_location):
+
+def DownloadFile(url, write_location, max_retries=3):
     """
-    Download a file from a given URL and save it to a specified location.
-    Args: url (str): The URL of the file to download; write_location (str): The path where the downloaded file will be saved.
-    Returns: str or file: The path to the saved file or an error message if the download fails.
+    Download a file from a given URL and save it to a specified location with retry and error handling.
+    
+    Args:
+        url (str): The URL of the file to download.
+        write_location (str): The path where the downloaded file will be saved.
+        max_retries (int): Maximum number of download retries in case of network errors.
+        
+    Returns:
+        str or None: The path to the saved file or None if the download fails.
     """
-    #TODO If internet shits the bed halfway through, it'll crash, find a way to not have this happen lol
-    response = requests.get(url, stream=True)
-    if response.status_code == 200:
-        total_size = int(response.headers.get('content-length', 0))
-        block_size = 1024
-        progress_bar = tqdm(total=total_size, unit='B', unit_scale=True, desc="Downloading new temperature data")
-        with open(write_location, 'wb') as file:
-            for data in response.iter_content(block_size):
-                progress_bar.update(len(data))
-                file.write(data)
-        progress_bar.close()
-        return write_location
-    else:
-        return f"Exited with {response.status_code} as error"
+    for attempt in range(max_retries + 1):
+        try:
+            response = requests.get(url, stream=True)
+            response.raise_for_status()  # Raise an error for non-200 status codes
+            total_size = int(response.headers.get('content-length', 0))
+            block_size = 1024
+            progress_bar = tqdm(total=total_size, unit='B', unit_scale=True, desc="Downloading new temperature data")
+            with open(write_location, 'wb') as file:
+                for data in response.iter_content(block_size):
+                    progress_bar.update(len(data))
+                    file.write(data)
+            progress_bar.close()
+            return write_location
+        except requests.exceptions.RequestException as e:
+            if attempt < max_retries:
+                print(f"Download failed on attempt {attempt + 1}. Retrying...")
+                time.sleep(5)  # Add a delay before retrying
+            else:
+                print(f"Download failed after {max_retries + 1} attempts. Error: {e}")
+                return None
 
 def ExtractZip(zip_file, extract_path):
     """
@@ -168,13 +182,13 @@ def RemoveFile(file):
 
 
 # Alles samenkomend ziet het er zo uit:
-def TemperatureDownloader(db, csv=False):
+def TemperatureDownloader(csv=False):
     """
     Downloads, processes, and cleans temperature data from the KNMI Climate Explorer.
     """
     url = "https://knmi-ecad-assets-prd.s3.amazonaws.com/download/ECA_blend_tg.zip" #Yes we have a hardcoded URL, but according to archive.org the website hasn't changed (except for updated data) since 2013 
     # https://web.archive.org/web/20130331004540/https://www.ecad.eu/dailydata/index.php
-    folderPath = "data/" #Where to store the download.zip and unpack the .txt files
+    folderPath = "csv/" #Where to store the download.zip and unpack the .txt files
     EUList = ['AT', 'BE', 'BG', 'HR', 'CY', 'DK', 'EE', 'FI', 'FR', 'DE', 'IE', 'IT', 'LV', 'LU', 'NL', 'NO', 'PL', 'RO', 'ES', 'SE', 'CH', 'GB'] #The stations have alpha_2 internal ID's, this are the ID's we're using.
 
     # Prepare all the data for processing
@@ -196,17 +210,17 @@ def TemperatureDownloader(db, csv=False):
             df = df[df["Q_TG"].astype(int).isin([0, 1])] #The Q_TG indicates the 'quality' of the data measurement, 0 is quality, 1 is probably good, and 9999 is unreliable. We only take into consideration the data of qualities 0 or 1 
             df["TG"] = df["TG"].astype(float) / 10 #The data is stored in integer format, in steps of 0.1 degrees celsius (so a value of 100 meant 10 degrees C). We will be using floats either way, so we convert the data to the correct value immediately
             df["DATE"] = pd.to_datetime(df["DATE"], format="%Y%m%d").dt.strftime('%Y-%m') #The date is formatted as a raw string, so we convert the DATE column to a pandas.datetime value
-            df = df[["DATE", "TG"]].rename(columns={'DATE': 'Date', 'TG': 'Temperature'}) #Rename the columns into something human-readable
-            df = df.groupby('Date')['Temperature'].mean().round().reset_index() #The temperature data is daily. This algorithm up untill now has saved the DATE value as [year]-[month] but it still goes line by line, meaning it'll collect 31 different values for October either way. This function is used to calculate the arithmic mean to get a reliable 'average' temparature of that country in that given month. This is a chosen trade-off between data granularity to improve data clearity and usability
-            df = df.dropna(subset=['Temperature']) #Drop all NA' temperatures
-            df = df[df['Date']>= '2000'] #Drop all temperatures before the year 2000
+            df = df[["DATE", "TG"]].rename(columns={'DATE': 'date', 'TG': 'temperature'}) #Rename the columns into something human-readable
+            df = df.groupby('date')['temperature'].mean().round().reset_index() #The temperature data is daily. This algorithm up untill now has saved the DATE value as [year]-[month] but it still goes line by line, meaning it'll collect 31 different values for October either way. This function is used to calculate the arithmic mean to get a reliable 'average' temparature of that country in that given month. This is a chosen trade-off between data granularity to improve data clearity and usability
+            df = df.dropna(subset=['temperature']) #Drop all NA' temperatures
+            df = df[df['date']>= '2000'] #Drop all temperatures before the year 2000
             #The following 3 lines split the Date column into a seperate Year and Month column
-            df['Date'] = pd.to_datetime(df['Date'])
-            df['Year'] = df['Date'].dt.year
-            df['Month'] = df['Date'].dt.month
-            df['Country'] = country #Add a country column with the value of the current country
-            df = df[["Country", "Year", "Month", "Temperature"]] #I wanted to have all dataframes in (more or less) the same order. No I'm not autistic and thinking such questions is rude >:£
-            db._load_data(exists="append", temperature=df) #Append the currently existing temperature table (which will be empty at the start of the loop) with the newly generated dataframe
+            df['date'] = pd.to_datetime(df['date'])
+            df['year'] = df['date'].dt.year
+            df['month'] = df['date'].dt.month
+            df['country'] = country #Add a country column with the value of the current country
+            df = df[["country", "year", "month", "temperature"]] #I wanted to have all dataframes in (more or less) the same order. No I'm not autistic and thinking such questions is rude >:£
+            # db._load_data(exists="append", temperature=df) #Append the currently existing temperature table (which will be empty at the start of the loop) with the newly generated dataframe
             
         toClean = [os.path.join(folderPath, file) for file in os.listdir(folderPath) if file.endswith(".txt") or file.endswith(".zip")] #Remove the leftover .txt and .zip files, which total to about ~4 gigs
         p_map(RemoveFile, toClean, desc="Cleaning leftover files")
@@ -216,3 +230,6 @@ def TemperatureDownloader(db, csv=False):
         return
     except Exception as e:
         print(f"quit with \n {e} \n as error")
+
+
+TemperatureDownloader()

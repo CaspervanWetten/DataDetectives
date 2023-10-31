@@ -6,12 +6,13 @@ def DownloadPopulationData(csv=False):
     try:
         df = wb.data.DataFrame('SP.POP.TOTL', EUList_alpha3 ,range(2008, 2050, 1)) #Download the correct Dataset
         df = df.reset_index() #It indexes on the economy by default, so we add a new index to translate the economy to Countries (Data cleaning!)
-        df.rename(columns = {'economy':'Country'}, inplace = True)
+        df.rename(columns = {'economy':'country'}, inplace = True)
         df.columns = df.columns.str.replace("YR", "") #By default the columns are named like "YR2011" but we want just "2011" (Data cleaning!)
-        df = df.melt(id_vars=['Country'], var_name='Year', value_name='Population').sort_values(["Year", "Country"])
-        df['Population'] = df['Population'].astype(int) #The population value defaults to a float (probably because some Americans only count as 2/3th) so we convert them to integers here
+        df = df.melt(id_vars=['country'], var_name='year', value_name='population').sort_values(["year", "country"])
+        df['population'] = df['population'].astype(int) #The population value defaults to a float (probably because some Americans only count as 2/3th) so we convert them to integers here
         if csv: # 
             df.to_csv("csv/Population.csv")
         return df
     except Exception as e:
         print(f"quit with {e} as error")
+

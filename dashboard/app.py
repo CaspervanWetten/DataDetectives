@@ -18,7 +18,7 @@ app.title="We testen wat!"
 
 db = Database()
 
-if False:
+if True:
     db._update_database()
 
 if False:
@@ -34,9 +34,9 @@ print(et_df.head(2))
 print(pop_df.head(2))
 print(tmp_df.head(2))
 
-df = db._fetch_data("electricity_consumption", "Country", "GWH", Year="=2010")
+df = db._fetch_data("electricity_consumption", "country", "gwh", year="=2010")
 print(df.head(2))
-possible_years = sorted(db._fetch_data("electricity_consumption", "Year", distinct=True), key=int)
+possible_years = sorted(db._fetch_data("electricity_consumption", "year", distinct=True), key=int)
 print(possible_years)
 selected_year = 2018
 selected_indicator = "consumption"
