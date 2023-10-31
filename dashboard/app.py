@@ -23,58 +23,32 @@ if False:
 if False:
     db._update_database_csv()
 
-ec_df = db._fetch_data("electricity_consumption")
-et_df = db._fetch_data("electricity_types")
-pop_df = db._fetch_data("population")
-tmp_df = db._fetch_data("temperature")
+ec_df = db._fetch_data("SELECT * FROM electricity_consumption")
+et_df = db._fetch_data("SELECT * FROM electricity_types")
+pop_df = db._fetch_data("SELECT * FROM population")
+tmp_df = db._fetch_data("SELECT * FROM temperature")
 
 print(ec_df.head(2))
 print(et_df.head(2))
 print(pop_df.head(2))
 print(tmp_df.head(2))
 
+
+
 df = db._fetch_data("electricity_consumption", "country", "gwh", year="=2010")
-print(df.head(2))
-possible_years = sorted(db._fetch_data("electricity_consumption", "year", distinct=True), key=int)
-print(possible_years)
+available_years = sorted(db._fetch_data("electricity_consumption", "year", distinct=True), key=int)
 selected_year = 2018
 selected_indicator = "consumption"
 
-# @app.callback(
-#     Output('selected_country_id', 'selected_country'),
-#     Input('choropleth', 'clickData')
-# )
-# def get_country(clickData):
-#     #code
-
-# @app.callback(
-#     Output("selected_year", "selected_year")
-#     Input("IETS`")
-# )
-# def get_year(iets):
-
-
-# @app.callback(
-#     Output("dataframe")
-#     Input("selected_country_ID", "selected_country")
-
-# )
-# def get_dataframe(selected_year, selected_country,):
-#     sql = f"""
-
-#         """
-#     db._fetch_data(sql)
-
-
-# @app.calllback(
-#         Output("")
-#         Input(Dataframe)
-# )
-# def update_choropleth():
-
-
-
-
+@app.callback(
+    Output('selected_country_id', 'selected_country'),
+    Input('choropleth', 'clickData')
+)
+def get_country(clickData):
+    selected_Country = "" 
+    if clickData is not None:
+        selected_Country = clickData['points'][0]['location']
+    return selected_Country
 
 
 
@@ -86,12 +60,33 @@ app.layout = html.Div(children=[
     html.Div(className='row', children=[
         html.Div(className='col-8', children=[
             html.Div(f'GWH {selected_indicator} distribution in Europe for {selected_year}', className="GWH"),
-            dcc.Graph(className="choropleth", id="choropleth", figure=update_choropleth(df))
+            dcc.Graph(className="choropleth", id="choropleth")
         ]),
         html.Div('Lorem ipsum 2', className='col-4')
     ]),
      html.Div(className='row', children=[
-         html.Div(className="col-6") 
+         html.Div(className="col-6", children=[
+            dcc.RadioItems(
+                id='year-radio',
+                options=[{'label': str(year), 'value': year} for year in available_years],
+                value=selected_year,  # Default to the first year
+        ),
+            dcc.Dropdown(
+                id='indic-dropdown',
+                options=[{'label': indic, 'value': indic} for indic in ec_df['indicator'].unique()],
+                value=ec_df['indicator'].unique()[0],
+                style={'width': '100%'}
+        ),
+            dcc.Dropdown(
+                id='display-mode-dropdown',
+                options=[
+                    {'label': 'Total GWH', 'value': 'total'},
+                    {'label': 'GWH per capita', 'value': 'per_capita'},
+                ],
+                value='total',  # Default to 'Total GWH'
+                style={'width': '100%'}
+        ),
+         ]) 
     ])
 ])
 

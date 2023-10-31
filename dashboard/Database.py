@@ -73,7 +73,7 @@ class Database:
             value.to_sql(str(key), self.engine, if_exists=exists, index=True)
         self.metadata = MetaData()
 
-    def _fetch_data(self, sel_table, *sel_columns, **sel_where):
+    def _fetch_data(self, query):
         """
         Fetch data from a specified table.
         Args:
@@ -88,52 +88,10 @@ class Database:
             or
             pd.DataFrame: If the query fails, it'll print an error and return an empty dataframe
         """
-        table = Table(sel_table, self.metadata, autoload_with=self.engine)
-
-        if sel_columns:
-            columns = [table.c[col] for col in sel_columns]
-        else:
-            columns = [table.c[col] for col in table.columns.keys()]
-        statement = select(*columns).select_from(table)
-
-        if sel_where.pop('distinct', ''):
-            statement = statement.distinct()
-
-        if sel_where:
-            for column_name, conditional in sel_where.items():
-                if "distinct" in conditional:
-                    continue
-                column = table.c[column_name]
-                operator_value = re.split(r'([<>=]+)', conditional)
-                operator = operator_value[1].strip()
-                value = operator_value[2].strip()
-
-                if not value.isdigit():
-                    statement = statement.where(text(f"'{column_name}' {conditional}"))
-                    continue
-                else:
-                    value = value.strip()
-                if operator == '=':
-                    statement = statement.where(column == value)
-                elif operator == '>':
-                    statement = statement.where(column > value)
-                elif operator == '<':
-                    statement = statement.where(column < value)
-                elif operator == '>=':
-                    statement = statement.where(column >= value)
-                elif operator == '<=':
-                    statement = statement.where(column <= value)
-                elif operator.lower() == 'like':
-                    statement = statement.where(column.like(value))
-                
         try:
             with self.engine.connect() as con:
-                result = con.execute(statement)
-                result = result.fetchall()
-            if len(columns) == 1:
-                return [row[0] for row in result]
-            df = pd.DataFrame(result, columns=[col.name for col in columns])
-            return df
+                res = pd.read_sql(query, con) if not query.isspace() else 0
+            return res
         except Exception as e:
-            print(f"Quit query: \n {statement} \n with the following SQL error: \n {e}")
+            print("Can't execute \n{query}\n due to error \n {e}")
             return pd.DataFrame()
