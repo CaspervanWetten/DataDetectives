@@ -28,6 +28,7 @@ class Database:
         """
         self.engine = create_engine("postgresql://student:infomdss@db_dashboard:5432/dashboard")
         self.metadata = MetaData()
+        self.metadata.reflect(self.engine)
 
     def _update_database(self):
         print("dropping old data...")
@@ -62,6 +63,11 @@ class Database:
             table.drop(self.engine)
         self.metadata = MetaData()
 
+    def _to_csv(self):
+        for table in self.metadata.tables.keys():
+            df = self._fetch_data(f"SELECT * FROM {table}")
+            df.to_csv(f"{table}.csv", index=False)
+
     def _load_data(self, exists="replace", **kwargs):
         """
         Load data into the database.
@@ -77,10 +83,7 @@ class Database:
         """
         Fetch data from a specified table.
         Args:
-            sel_table (str): name of the table
-            sel_columns: a list of returned columns, passing none will return all columns
-            sel_where: keyword arguments where column name == conditional, passing no condition will return all columns. Can also pass distinct="true" to get all unique values;
-            The query "SELECT Country, GWH FROM electricity WHERE year == 2010" would be  _fetch_data(electricity, Country, GWH, year="=2010")
+            query (str): The SQL query to execute on the database
         Returns:
             pd.DataFrame: DataFrame containing the fetched data.
             or
