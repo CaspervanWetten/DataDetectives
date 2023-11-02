@@ -2,12 +2,13 @@ import requests
 import zipfile
 import os
 import pycountry
+import requests
+import time
 import pandas as pd
 import regex as re
 from tqdm import tqdm
 from p_tqdm import p_map
-import requests
-import time
+from pathlib import Path
 # Dit zijn meer algehele, saaie helper functies:
 
 def FilterEmptyDict(input_dict):
@@ -18,16 +19,13 @@ def FilterEmptyDict(input_dict):
     """
     return {key: val for key, val in input_dict.items() if val}
 
-
-def DownloadFile(url, write_location, max_retries=3):
+def DownloadFile(url, write_location, max_retries=5):
     """
     Download a file from a given URL and save it to a specified location with retry and error handling.
-    
     Args:
         url (str): The URL of the file to download.
         write_location (str): The path where the downloaded file will be saved.
         max_retries (int): Maximum number of download retries in case of network errors.
-        
     Returns:
         str or None: The path to the saved file or None if the download fails.
     """
@@ -47,7 +45,7 @@ def DownloadFile(url, write_location, max_retries=3):
         except requests.exceptions.RequestException as e:
             if attempt < max_retries:
                 print(f"Download failed on attempt {attempt + 1}. Retrying...")
-                time.sleep(5)  # Add a delay before retrying
+                time.sleep(2)  # Add a delay before retrying
             else:
                 print(f"Download failed after {max_retries + 1} attempts. Error: {e}")
                 return None
@@ -74,7 +72,7 @@ def GenerateStationIDs(folderPath):
     Args: the folderpath to the stations file
     Return: dictionary: {ID : Country}; note that {country} is formatted in ISO3116 alpha-2
     """
-    with open(folderPath + 'stations.txt') as f:
+    with open(folderPath / 'stations.txt') as f:
         lines = f.readlines()
         lines = lines[17:]
         f.close()
@@ -105,65 +103,11 @@ def RenameFiles(folderPath, CountryIDs, reg=r"TG_STAID0(\d*)", group=1):
 def ConvertAlpha2(code):
     return pycountry.countries.get(alpha_2=code).alpha_3
 
-# def CleanTemperatureDataframes(results, dataframeDict, folderPath = "data/temperature/", save = False):
-#     """
-#     Cleans and processes temperature dataframes.
-#     Parameters: results (list): A list of tuples containing country names and their respective dataframes.
-#         dataframeDict (dict): A dictionary to store the cleaned dataframes.
-#         folderPath (str): The path to the folder where the cleaned dataframes will be saved.
-#         save (bool): A flag indicating whether to save the cleaned dataframes to disk.
-#     Returns: dict: A dictionary containing cleaned dataframes grouped by country name.
-#     """
-#     for result in results:
-#         country = result[0]
-#         df = result[1]
-#         if country in dataframeDict.keys():
-#             dataframeDict[country].append(df)
-#     #Filter out the empty countries:
-#     dataframeDict = {ConvertAlpha2(key): val for key, val in dataframeDict.items() if val}
-#     #Average the temperatures of the same months
-#     for country, dfList in dataframeDict.items():
-#             concated = pd.concat(dfList, ignore_index=True)
-#             dataframeDict[country] = concated.groupby('Date')['Temperature'].mean().round().reset_index()
-    
-    
-#     #Legacy Saving Code, I'm unsure if it actually works
-#     if save:    
-#         for key, value in dataframeDict.items():
-#             value.to_csv(folderPath+str(key)+".csv", index=False)
-#     return dataframeDict
-
-# def CombineSavedCSV(folder_path):
-#     #Dit is Legacy Code, ik kan je oprecht niet met zekerheid vertellen of het werkt 
-#     csv_files = [f for f in os.listdir(folder_path) if f.endswith('.csv')]
-#     combined_df = pd.DataFrame(columns=["Date"])
-#     for file in csv_files:
-#         df = pd.read_csv(os.path.join(folder_path, file))
-#         df.set_index('Date', inplace=True)
-#         country_name = os.path.splitext(file)[0]
-#         df.rename(columns={'Temperature': country_name}, inplace=True)
-#         combined_df = combined_df.join(df, how='outer')
-#     combined_df = combined_df.reindex(sorted(combined_df.columns), axis=1)
-#     return combined_df
-
-# def CombineCSVDict(dict):
-    # """
-    # Combines multiple pandas DataFrames into a single DataFrame.
-    # Parameters: dict: A dictionary containing the DataFrames to be combined.
-    # Returns: A DataFrame containing data from all input DataFrames, matched on the Date column.
-    # """
-    # dfs = [df.set_index('Date').rename(columns={"Temperature" : country}) for country, df in dict.items()]
-    # result = pd.concat(dfs, axis=1).reset_index()
-    # result = pd.melt(result, id_vars=['Date'], var_name='Country', value_name='Temperature')
-    # result = result.dropna(subset=['Temperature'])
-    # result = result[result['Date']>= '2000']
-    # return result
-
 def DownloadTemperatureData(url, folderPath):
     """
     Downloading AND unzipping, what more do you want?!
     """
-    download = DownloadFile(url, folderPath+"download.zip")
+    download = DownloadFile(url, folderPath / "download.zip")
     ExtractZip(download, folderPath)
 
 def ClassifyTemperatureData(folderPath):
@@ -188,7 +132,10 @@ def TemperatureDownloader(db, csv=False):
     """
     url = "https://knmi-ecad-assets-prd.s3.amazonaws.com/download/ECA_blend_tg.zip" #Yes we have a hardcoded URL, but according to archive.org the website hasn't changed (except for updated data) since 2013 
     # https://web.archive.org/web/20130331004540/https://www.ecad.eu/dailydata/index.php
-    folderPath = "csv/" #Where to store the download.zip and unpack the .txt files
+    if not os.path.exists("csv"):
+        os.mkdir("csv")
+
+    folderPath = Path(os.path.join(os.getcwd(), "csv"))
     EUList = ['AT', 'BE', 'BG', 'HR', 'CY', 'DK', 'EE', 'FI', 'FR', 'DE', 'IE', 'IT', 'LV', 'LU', 'NL', 'NO', 'PL', 'RO', 'ES', 'SE', 'CH', 'GB'] #The stations have alpha_2 internal ID's, this are the ID's we're using.
 
     # Prepare all the data for processing
