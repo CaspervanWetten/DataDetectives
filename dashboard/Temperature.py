@@ -146,18 +146,29 @@ def TemperatureDownloader(db, csv=False):
         #The 'classify' function searches for the country the temperature measuring station is stationed in as well as the stationID, and renames the .txt file to [country][stationID]. This could be done in the following algorithm, but for debugging purposes we chose to keep it explicit. Also makes it easier to detect if data is relevant for us or not
         ClassifyTemperatureData(folderPath)
 
-        files = [folderPath+filename for filename in os.listdir(folderPath) if filename.endswith(".txt")] #Get all the .txt file names in the folderpath, these are the [country][stationID files]  
-        for txt in tqdm(files, desc="Preparing the data"):
-            if not re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)" ,txt):
-                print(f"No match with {txt}") #The dataset includes some metadata .txt files, such as 'stations.txt', 'date_timestamp.txt' or 'elements.txt', we use this regex to filter those out.
+
+        #The dataset includes some metadata .txt files, such as 'stations.txt', 'date_timestamp.txt' or 'elements.txt', we use this regex to filter those out.
+        for country in EUList:
+            df = pd.DataFrame()
+            df_list = []
+            files = [folderPath / filename for filename in os.listdir(folderPath) if filename.startswith(country) and filename.endswith(".txt")] #Get all the .txt file names in the folderpath, these are the [country][stationID files]  
+            country = ConvertAlpha2(country)
+            for txt in tqdm(files, desc=f"Preparing temperature data for {country}"):
+                if not re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)", str(txt)):
+                    print(f"no match with {txt}")
+                    continue
+                df = pd.DataFrame()
+                df = pd.read_csv(txt, header=None, skiprows=21, names=["STAID", "SOUID", "DATE", "TG", "Q_TG"], usecols=["DATE", "TG", "Q_TG"]) #The internal formatting of the .txt's is a little weird. In summary, the first 21 lines are 'metadata', while the lines after are more like a csv formatted as a.txt; This pandas function reads all the required data into a dataframe, and discards the unneccesary data
+                df = df[df["Q_TG"].astype(int).isin([0, 1])] #The Q_TG indicates the 'quality' of the data measurement, 0 is quality, 1 is probably good, and 9999 is unreliable. We only take into consideration the data of qualities 0 or 1 
+                df["TG"] = df["TG"].astype(float) / 10 #The data is stored in integer format, in steps of 0.1 degrees celsius (so a value of 100 meant 10 degrees C). We will be using floats either way, so we convert the data to the correct value immediately
+                df["DATE"] = pd.to_datetime(df["DATE"], format="%Y%m%d").dt.strftime('%Y-%m') #The date is formatted as a raw string, so we convert the DATE column to a pandas.datetime value
+                df = df[["DATE", "TG"]].rename(columns={'DATE': 'date', 'TG': 'temperature'}) #Rename the columns into something human-readable
+                df_list.append(df)
+
+            #although we don't expect it to happen, it may happen in the future that anyone of these countries are removed from the EU. Just in case, we check if the list isn't empty
+            if df_list == []:
                 continue
-            if re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)", txt).group(1) in EUList: #The first part of the regex (i.e. group(1)) catches the country name, while the second part (i.e. group(2)) catches the stationID.
-                country = ConvertAlpha2(re.match(r"[a-zA-Z/]*/([a-zA-Z\ ]+)(\d+)", txt).group(1))
-            df = pd.read_csv(txt, header=None, skiprows=21, names=["STAID", "SOUID", "DATE", "TG", "Q_TG"], usecols=["DATE", "TG", "Q_TG"]) #The internal formatting of the .txt's is a little weird. In summary, the first 21 lines are 'metadata', while the lines after are more like a csv formatted as a.txt; This pandas function reads all the required data into a dataframe, and discards the unneccesary data
-            df = df[df["Q_TG"].astype(int).isin([0, 1])] #The Q_TG indicates the 'quality' of the data measurement, 0 is quality, 1 is probably good, and 9999 is unreliable. We only take into consideration the data of qualities 0 or 1 
-            df["TG"] = df["TG"].astype(float) / 10 #The data is stored in integer format, in steps of 0.1 degrees celsius (so a value of 100 meant 10 degrees C). We will be using floats either way, so we convert the data to the correct value immediately
-            df["DATE"] = pd.to_datetime(df["DATE"], format="%Y%m%d").dt.strftime('%Y-%m') #The date is formatted as a raw string, so we convert the DATE column to a pandas.datetime value
-            df = df[["DATE", "TG"]].rename(columns={'DATE': 'date', 'TG': 'temperature'}) #Rename the columns into something human-readable
+            df = pd.concat(df_list)
             df = df.groupby('date')['temperature'].mean().round().reset_index() #The temperature data is daily. This algorithm up untill now has saved the DATE value as [year]-[month] but it still goes line by line, meaning it'll collect 31 different values for October either way. This function is used to calculate the arithmic mean to get a reliable 'average' temparature of that country in that given month. This is a chosen trade-off between data granularity to improve data clearity and usability
             df = df.dropna(subset=['temperature']) #Drop all NA' temperatures
             df = df[df['date']>= '2000'] #Drop all temperatures before the year 2000
@@ -167,6 +178,8 @@ def TemperatureDownloader(db, csv=False):
             df['month'] = df['date'].dt.month
             df['country'] = country #Add a country column with the value of the current country
             df = df[["country", "year", "month", "temperature"]] #I wanted to have all dataframes in (more or less) the same order. No I'm not autistic and thinking such questions is rude >:£
+            print(f"Final df for {country}: ")
+            print(df.head(20))
             db._load_data(exists="append", temperature=df) #Append the currently existing temperature table (which will be empty at the start of the loop) with the newly generated dataframe
             
         toClean = [os.path.join(folderPath, file) for file in os.listdir(folderPath) if file.endswith(".txt") or file.endswith(".zip")] #Remove the leftover .txt and .zip files, which total to about ~4 gigs
@@ -176,5 +189,4 @@ def TemperatureDownloader(db, csv=False):
             df.to_csv("csv/Temperature.csv")
         return
     except Exception as e:
-        print(f"quit with \n {e} \n as error")
-
+        print(f"quit temperature downloader with \n {e} \n as error")
