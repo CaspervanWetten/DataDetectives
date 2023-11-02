@@ -19,7 +19,7 @@ app.title="Datadatectives dashboard"
 
 db = Database()
 
-if False:
+if True:
     db._update_database()
 
 if False:
