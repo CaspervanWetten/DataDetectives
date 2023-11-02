@@ -25,6 +25,9 @@ if False:
 if False:
     db._update_database_csv()
 
+if False:
+    db._to_csv()
+
 ec_df = db._fetch_data("SELECT * FROM electricity_consumption")
 
 max_gwh = max(db._fetch_data("SELECT gwh FROM electricity_consumption"))
