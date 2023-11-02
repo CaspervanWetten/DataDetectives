@@ -90,8 +90,10 @@ class Database:
         """
         try:
             with self.engine.connect() as con:
-                res = pd.read_sql(query, con) if not query.isspace() else 0
+                res = pd.read_sql(query, con)
+                if len(res.columns) == 1:
+                    return res.iloc[:,0]
             return res
         except Exception as e:
-            print("Can't execute \n{query}\n due to error \n {e}")
+            print(f"Can't execute \n{query}\n due to error \n {e}")
             return pd.DataFrame()
