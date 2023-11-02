@@ -106,12 +106,11 @@ def update_monthly_energy(indicator, year, display, country):
     if country=="":
         return create_empty_figure("Select a Country in the choropleth to view data")
     sql = f"""
-            SELECT * FROM {display} as e
+            SELECT e.country, e.month, e.gwh, t.temperature FROM {display} as e
             INNER JOIN temperature as t ON e.country=t.country AND e.year=t.year AND e.month=t.month
             WHERE e.year='{year}' AND e.indicator='{indicator}' AND e.country='{country}'
             """
     df = db._fetch_data(sql)
-
     fig = px.bar(df, x='month', y='gwh', 
                  title=f"Energy {indicator} for {country} in {year}",
                  labels={"gwh" : f"Energy {indicator} in Gigawatt hours"},
