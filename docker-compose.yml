@@ -5,7 +5,7 @@ services:
         tty: true
         build:
             context: .
-            dockerfile: dashboard/Dockerfile_dashboard  # Specify the unique Dockerfile name I'm so not sure how this works
+            dockerfile: dashboard/Dockerfile_dashboard  # Specify the unique Dockerfile name; I'm so not sure how this works
         ports:
             - 8080:8080
         volumes:
@@ -43,7 +43,7 @@ services:
             - POSTGRES_PASSWORD=infomdss
             - POSTGRES_DB=dashboard
         volumes:
-            - db_dashboard-data:/var/lib/postgresql/data/
+            - db_dashboard-data:/var/lib/postgresql/data2/
         container_name: db_dashboard
         healthcheck:
             test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
