@@ -19,7 +19,7 @@ app.title="Datadatectives dashboard"
 
 db = Database()
 
-if True:
+if False:
     db._update_database()
 
 if False:
@@ -106,8 +106,7 @@ def update_monthly_energy(indicator, year, display, country):
     if country=="":
         return create_empty_figure("Select a Country in the choropleth to view data")
     sql = f"""
-            SELECT e.country, e.month, e.gwh, t.temperature FROM {display} as e
-            INNER JOIN temperature as t ON e.country=t.country AND e.year=t.year AND e.month=t.month
+            SELECT e.country, e.month, e.gwh FROM {display} as e
             WHERE e.year='{year}' AND e.indicator='{indicator}' AND e.country='{country}'
             """
     df = db._fetch_data(sql)
@@ -115,11 +114,46 @@ def update_monthly_energy(indicator, year, display, country):
                  title=f"Energy {indicator} for {country} in {year}",
                  labels={"gwh" : f"Energy {indicator} in Gigawatt hours"},
                  color="gwh",
+                 # TODO zorg ervoor dat de maanden goed staan, dit is alleen soms
+                 text="month",
                  text_auto='.2s',
                  color_continuous_scale="Emrld",
                  )
     return fig
  
+
+@app.callback(
+    Output('bar-chart-temp', 'figure'),
+    [Input('indic-dropdown', 'value'),
+    Input('year-radio', 'value'),
+    Input('display-mode-dropdown', 'value'),
+    Input('country', 'children')]
+)
+def update_bar_energy_temperature(indicator, year, display, country):
+    if country=="":
+        return create_empty_figure("")
+    sql = f"""
+            SELECT e.country, e.month, e.gwh FROM {display} as e
+            WHERE e.year='{year}' AND e.indicator='{indicator}' AND e.country='{country}'
+            """
+    df = db._fetch_data(sql)
+    fig = px.bar(df, x='month', y='gwh', 
+                 title=f"Energy {indicator} for {country} in {year}",
+                 labels={"gwh" : f"Energy {indicator} in Gigawatt hours"},
+                 color="gwh",
+                 text=df["month"],
+                 color_continuous_scale="Emrld",
+                 )
+    fig.add_trace(
+            go.Scatter(x=months, y=temperatures, mode='lines+markers', name='Temperature', line=dict(color='#E7243B'), yaxis='y2')
+        )
+    return fig
+ 
+
+
+
+
+
 @app.callback(
     Output('country', 'children'),
     Input('choropleth', 'clickData'), 
@@ -178,6 +212,6 @@ app.layout = html.Div(children=[
 
 if __name__ == '__main__':
     print("Started")
-    app.run_server(debug=False, host="0.0.0.0", port=8080)
+    app.run_server(debug=True, host="172.19.0.3", port=8080)
     # Casper: 172.19.0.3
     # Alle andere: 127.0.0.1
