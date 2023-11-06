@@ -29,6 +29,7 @@ if False:
     db._to_csv()
 
 ec_df = db._fetch_data("SELECT * FROM electricity_consumption")
+temp_df = db._fetch_data("SELECT * FROM temperature")
 
 max_gwh = max(db._fetch_data("SELECT gwh FROM electricity_consumption"))
 min_gwh = min(db._fetch_data("SELECT gwh FROM electricity_consumption"))
@@ -37,6 +38,7 @@ available_years = sorted(db._fetch_data("SELECT DISTINCT year FROM electricity_c
 year = 2018
 indicator = "Consumption"
 display_choro = "electricity_consumption"
+month = 2
 country=""
 
 def create_empty_figure(title=''):
@@ -48,13 +50,14 @@ def create_empty_figure(title=''):
 @app.callback(
     Output('choropleth', 'figure'),
     [Input('indic-dropdown', 'value'),
+    Input('month-slider', 'value'),
     Input('year-radio', 'value'),
     Input('display-mode-dropdown', 'value')]
 )
-def update_choropleth(indicator, year, display):
+def update_choropleth(indicator, month, year, display):
     sql = f"""
             SELECT country, gwh FROM {display} 
-            WHERE year='{year}' AND indicator='{indicator}'
+            WHERE year='{year}' AND indicator='{indicator}' AND month='{month}'
             """
     df = db._fetch_data(sql)
     sleep(0.1)
@@ -64,7 +67,8 @@ def update_choropleth(indicator, year, display):
                         hover_name="country",
                         color_continuous_scale="Emrld",
                         scope="europe",
-                        range_color=(min_gwh, max_gwh)
+                        range_color=(min_gwh, max_gwh),
+                        title=f"{indicator} for {year} and {display}"
                         )
 
     fig.update_geos(
@@ -81,14 +85,7 @@ def update_choropleth(indicator, year, display):
             showcoastlines=False,
             projection_type='equirectangular'
         ),
-        margin = dict(
-                l=0,
-                r=0,
-                b=0,
-                t=0,
-                pad=4,
-                autoexpand=True
-            ),
+        title= f'GWH {indicator} in Europe for the month {month} in the year {year}',
         width=800,
         dragmode=False
         )
@@ -130,24 +127,32 @@ def update_monthly_energy(indicator, year, display, country):
     Input('country', 'children')]
 )
 def update_bar_energy_temperature(indicator, year, display, country):
-    if country=="":
+    if country == "":
         return create_empty_figure("")
-    sql = f"""
+
+    sql_energy = f"""
             SELECT e.country, e.month, e.gwh FROM {display} as e
             WHERE e.year='{year}' AND e.indicator='{indicator}' AND e.country='{country}'
             """
-    df = db._fetch_data(sql)
-    fig = px.bar(df, x='month', y='gwh', 
+
+    sql_temp = f"""
+            SELECT t.country, t.month, t.temperature FROM {display} as t
+            WHERE t.year='{year}' AND t.country='{country}'
+            """
+
+    df_energy = db._fetch_data(sql_energy)
+    fig = px.bar(df_energy, x='month', y='gwh', 
                  title=f"Energy {indicator} for {country} in {year}",
-                 labels={"gwh" : f"Energy {indicator} in Gigawatt hours"},
+                 labels={"gwh": f"Energy {indicator} in Gigawatt hours"},
                  color="gwh",
-                 text=df["month"],
-                 color_continuous_scale="Emrld",
+                 text='month',
+                 color_continuous_scale="Emrld"
                  )
-    fig.add_trace(
-            go.Scatter(x=months, y=temperatures, mode='lines+markers', name='Temperature', line=dict(color='#E7243B'), yaxis='y2')
-        )
+    
+    fig.add_trace(go.Scatter(x=temp_df['month'], y=temp_df['temperature'], mode='lines+markers', name='Temperature', line=dict(color='#E7243B'), yaxis='y2'))
+
     return fig
+
  
 
 
@@ -174,10 +179,12 @@ app.layout = html.Div(children=[
     html.Div(className='row', children=[
         html.Div(className='col-6 col-xs-12', children=[
             html.Br(),
-            dcc.Loading(id="loading-choro", type="default", children=dcc.Graph(id="choropleth", figure=update_choropleth(indicator, year, display_choro)))]),
+            dcc.Loading(id="loading-choro", type="default", children=dcc.Graph(id="choropleth", figure=update_choropleth(indicator, month, year, display_choro)))]),
         html.Div(className='col-6 col-xs-12', children=[
             html.Br(),
-            dcc.Loading(id="loading-bar-1", type="default", children=dcc.Graph(id='bar-chart-1'))
+            dcc.Loading(id="loading-bar-1", type="default", children=dcc.Graph(id='bar-chart-1')),
+            html.Br(),
+            dcc.Loading(id="loading-bar-2", type="default", children=dcc.Graph(id='bar-chart-temp'))
         ])
     ]),
      html.Div(className='row', children=[
@@ -190,6 +197,11 @@ app.layout = html.Div(children=[
                 value=year,
                 step=1,
             ),
+             dcc.Slider(
+            id='month-slider',
+            marks={month: str(month) for month in range(1, 13)},
+            step=1,
+             ),
             dcc.Dropdown(
                 id='indic-dropdown',
                 options=[{'label': indic, 'value': indic} for indic in ec_df['indicator'].unique()],
@@ -212,6 +224,6 @@ app.layout = html.Div(children=[
 
 if __name__ == '__main__':
     print("Started")
-    app.run_server(debug=False, host="172.19.0.3", port=8080)
+    app.run_server(debug=True, host="172.19.0.3", port=8080)
     # Casper: 172.19.0.3
     # Alle andere: 127.0.0.1
