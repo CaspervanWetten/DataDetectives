@@ -212,6 +212,6 @@ app.layout = html.Div(children=[
 
 if __name__ == '__main__':
     print("Started")
-    app.run_server(debug=True, host="172.19.0.3", port=8080)
+    app.run_server(debug=False, host="172.19.0.3", port=8080)
     # Casper: 172.19.0.3
     # Alle andere: 127.0.0.1
