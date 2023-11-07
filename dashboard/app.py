@@ -61,6 +61,7 @@ def create_empty_figure(title='Select a Country in the choropleth to view data')
 
 # Update the choropleth figure
 @app.callback(
+    Output('choropleth', 'figure'),
     [Input('indic-dropdown', 'value'),
     Input('month-slider', 'value'),
     Input('year-radio', 'value'),
