@@ -106,6 +106,7 @@ def update_monthly_energy(indicator, year, display, country):
             SELECT e.country, e.month, e.gwh FROM {display} as e
             WHERE e.year='{year}' AND e.indicator='{indicator}' AND e.country='{country}'
             """
+            
     df = db._fetch_data(sql)
     fig = px.bar(df, x='month', y='gwh', 
                  title=f"Energy {indicator} for {country} in {year}",
@@ -136,21 +137,33 @@ def update_bar_energy_temperature(indicator, year, display, country):
             """
 
     sql_temp = f"""
-            SELECT t.country, t.month, t.temperature FROM {display} as t
+            SELECT t.country, t.month, t.temperature FROM temperature as t
             WHERE t.year='{year}' AND t.country='{country}'
             """
-
-    df_energy = db._fetch_data(sql_energy)
-    fig = px.bar(df_energy, x='month', y='gwh', 
-                 title=f"Energy {indicator} for {country} in {year}",
-                 labels={"gwh": f"Energy {indicator} in Gigawatt hours"},
-                 color="gwh",
-                 text='month',
-                 color_continuous_scale="Emrld"
-                 )
     
-    fig.add_trace(go.Scatter(x=temp_df['month'], y=temp_df['temperature'], mode='lines+markers', name='Temperature', line=dict(color='#E7243B'), yaxis='y2'))
+    # Create a subplot with two Y-axes
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    df_energy = db._fetch_data(sql_energy)
+       # Add the primary bar chart for electricity consumption
+    fig.add_trace(go.Bar(x=df_energy['month'], y=df_energy['gwh'], name='GWH', marker_color='#08308e'))
+    
+    df_temp = db._fetch_data(sql_temp)
+    print(df_temp)
+       # Add the secondary line chart for temperature
+    fig.add_trace(go.Scatter(x=df_temp['month'], y=df_temp['temperature'], mode='lines+markers', name='Temperature', line=dict(color='#E7243B'), yaxis='y2'))
 
+    
+
+    # Update the layout to display both Y-axes
+    fig.update_layout(
+        title=f'Electricity Consumption and Temperature in {country} for year {year}',
+        xaxis=dict(title='Month'),
+        yaxis=dict(title='GWH', side='left'),
+        yaxis2=dict(title='Temperature (°C)', side='right', overlaying='y', showgrid=False),
+        showlegend=True,
+    )
+    
+    
     return fig
 
  
