@@ -20,13 +20,16 @@ db = Database()
 if False:
     db._update_database()
 
-if True:
+if False:
     db._update_database_csv()
 
 ec_df = db._fetch_data("SELECT * FROM electricity_consumption")
 et_df = db._fetch_data("SELECT * FROM electricity_types")
 pop_df = db._fetch_data("SELECT * FROM population")
 tmp_df = db._fetch_data("SELECT * FROM temperature")
+
+pop_df['year'] = pop_df['year'].astype(int) # CRACK CODE
+db._load_data(population = pop_df)
 
 print(ec_df.head(2))
 print(et_df.head(2))

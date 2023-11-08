@@ -43,7 +43,7 @@ services:
             - POSTGRES_PASSWORD=infomdss
             - POSTGRES_DB=dashboard
         volumes:
-            - db_dashboard-data:/var/lib/postgresql/data/
+            - db_dashboard-data:/var/lib/postgresql/data3/
         container_name: db_dashboard
         healthcheck:
             test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
