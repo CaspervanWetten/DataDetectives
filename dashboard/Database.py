@@ -1,10 +1,10 @@
+import os
 import pandas as pd
-import regex as re
-from sqlalchemy import create_engine, Table, MetaData, select, text
+from sqlalchemy import create_engine, MetaData
 from Electricty import MonthlyElectricity, TypesOfEnergy
 from Temperature import TemperatureDownloader
 from Population import DownloadPopulationData
-
+from PerCapita import caculate_per_capita
 
 class Database:
     """
@@ -39,34 +39,42 @@ class Database:
         self._load_data(electricity_consumption=MonthlyElectricity())
         print("Downloading new segregated electricity data...") #shit am I racist????
         self._load_data(electricity_types=TypesOfEnergy())
+        print("Calculating the per capita energy") 
+        self._load_data(consumption_capita = caculate_per_capita(self._fetch_data("SELECT * FROM population"), self._fetch_data("SELECT * FROM electricity_consumption")))
         #The temperature data appends the database, hence why it passes the database as a self object
         TemperatureDownloader(db=self)
+        self.metadata.reflect(self.engine)
 
     def _update_database_csv(self):
         print("dropping old data...")
         self._drop_all_tables()
         print("Getting population data...")
-        self._load_data(population=pd.read_csv("csv/population.csv"))
+        self._load_data(population=pd.read_csv("csv/population.csv", index_col="index"))
         print("Getting monthly electricity data...")
-        self._load_data(electricity_consumption=pd.read_csv("csv/electricity_consumption.csv"))
+        self._load_data(electricity_consumption=pd.read_csv("csv/electricity_consumption.csv", index_col="index"))
         print("Getting segregated electricity data...")
-        self._load_data(electricity_types=pd.read_csv("csv/electricity_types.csv"))
+        self._load_data(electricity_types=pd.read_csv("csv/electricity_types.csv", index_col="index"))
         print("Getting temperature data...") 
-        self._load_data(temperature=pd.read_csv("csv/temperature.csv"))
+        self._load_data(temperature=pd.read_csv("csv/temperature.csv", index_col="index"))
+        print("Calculating the per capita energy") 
+        self._load_data(energy_capita = caculate_per_capita(self._fetch_data("SELECT * FROM population"), self._fetch_data("SELECT * FROM electricity_consumption")))
+        self.metadata.reflect(self.engine)
 
     def _drop_all_tables(self):
         """
         Drops all tables in the database
         """
-        self.metadata.reflect(bind=self.engine)
+        self.metadata.reflect(self.engine)
         for table in reversed(self.metadata.sorted_tables):
             table.drop(self.engine)
-        self.metadata = MetaData()
+        self.metadata.reflect(self.engine)
 
     def _to_csv(self):
+        if not os.path.exists('csv'):
+            os.makedirs('csv')
         for table in self.metadata.tables.keys():
             df = self._fetch_data(f"SELECT * FROM {table}")
-            df.to_csv(f"{table}.csv", index=False)
+            df.to_csv(os.path.join('csv', f"{table}.csv"), index=False)
 
     def _load_data(self, exists="replace", **kwargs):
         """
