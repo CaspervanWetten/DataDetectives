@@ -20,7 +20,7 @@ db = Database()
 if False:
     db._update_database()
 
-if False:
+if True:
     db._update_database_csv()
 
 ec_df = db._fetch_data("SELECT * FROM electricity_consumption")
