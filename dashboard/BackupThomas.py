@@ -393,59 +393,7 @@ def calculate_average_monthly_temperature(selected_Country, selected_year):
     average_monthly_temperature = temperature_data_for_Country.groupby(temperature_data_for_Country['Date'].dt.month)['Temperature'].mean()
 
     return average_monthly_temperature
-def TypesOfEnergy():
-    try: 
-        df = es.get_data_df("ten00122")
-        df.drop(columns=['freq','nrg_bal','unit'], inplace=True)
-        return df
-    except Exception as e:
-        return f"quit with {e} as error"
 
-df2 = TypesOfEnergy()
-df2.fillna(0, inplace=True)
-#change column name to country and also energy_kind
-df2 = df2.rename(columns={'geo\\TIME_PERIOD': 'country'})
-df2 = df2.rename(columns={'siec': 'energy'})
-
-belgiumdf = df2[df2['country'] == 'AL']
-unique_values = belgiumdf['energy'].unique()
-
-#remap all energy values 
-unique_energy_values = df2['energy'].unique()
-
-# Define a mapping of old values to new values
-value_mapping = {
-    'C0000X0350-0370': 'Solid fossil fuels',
-    'C0350-0370': 'Manufactured gases',
-    'P1000': 'Peat and peat products',
-    'S2000': 'Oil shale and oil sands',
-    'O4000XBIO': 'Oil and petroleum products (excluding biofuel portion)',
-    'G3000': 'Natural gas',
-    'RA000': 'Renewables and biofuels',
-    'W6100_6220': 'Non-renewable waste',
-    'N900H': 'Nuclear heat',
-    'H8000': 'Heat',
-    'E7000': 'Electricity',
-    'TOTAL': 'Total'
-}
-# Replace the values in the DataFrame
-df2['energy'] = df2['energy'].replace(value_mapping)
-
-#remove the total attribute for our plots
-df2 = df2[df2['energy'] != 'Total']
-df_pivot = df2.melt(id_vars=['energy', 'country'], var_name='year', value_name='consumption')
-grouped = df_pivot.groupby(['energy', 'year'])['consumption'].sum().unstack()
-energy_groups = df2.groupby('energy')
-print(df2.head())
-
-# Define a callback function to update the pie chart based on the selected year
-@app.callback(
-    Output('energy-pie-chart', 'figure'),
-    Input('year-dropdown', 'value')
-)
-def update_pie_chart(selected_year):
-    fig = px.pie(df2, names='energy', values=selected_year, title=f'Energy Source Distribution in {selected_year}')
-    return fig
 
 if __name__ == '__main__':
     app.run_server(debug=True, host='127.0.0.1', port=7767)
