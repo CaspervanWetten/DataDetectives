@@ -280,8 +280,8 @@ def update_production_vs_consumption(year, display, country):
     labels={"month": "Month", "gwh": "GWH"},
     range_color="Emrld",
     color_discrete_map={
-        "Production": "#c850a0",
-        "Consumption": "#1e6134"
+        "Production": "#08308e",
+        "Consumption": "#E7243B"
     }
     )
 
@@ -353,7 +353,9 @@ def get_country(clickData):
 
 
 app.layout = html.Div(children=[
-    html.H1('Hello Dash!'),
+    html.Link(rel='stylesheet',
+                href='dashboard\stylesheet.css'),
+    html.H1('Data Detectives Dashboard'),
     html.Div(className='row', children=[
         html.Div(className='col-6', children=[
             html.Br(),
@@ -437,7 +439,7 @@ app.layout = html.Div(children=[
 
 if __name__ == '__main__':
     print("Started")
-    app.run_server(debug=True, host="0.0.0.0", port=8080)
+    app.run_server(debug=True, host="127.0.0.1", port=8080)
     # Casper: 172.19.0.3
     # Thomas: 127.0.0.1:8080
     # Alle andere: 127.0.0.1
