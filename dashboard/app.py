@@ -8,7 +8,14 @@ from dash.dependencies import Input, Output
 from plotly.subplots import make_subplots 
 from Database import Database
 from time import sleep
-from datetime import datetime
+import pycountry
+
+def convert_alpha3_full_name(alpha3_code):
+    try:
+        return pycountry.countries.get(alpha_3=alpha3_code).name
+    except Exception as e:
+        print(e)
+        return ""
 
 
 app = dash.Dash(__name__)
@@ -78,26 +85,18 @@ def update_choropleth(indicator, month, year, display):
         center=dict(lat=51.1657, lon=10.4515),
         projection_scale=15         
     )
-
+    #TODO Add display check to change title
     fig.update_layout(
-        autosize=False,
+        autosize=True,
         geo=dict(
             showcoastlines=False,
             projection_type='equirectangular'
         ),
         title= f'GWH {indicator} in Europe for the month {month} in the year {year}',
-        width=800,
         dragmode=False
         )
 
     return fig
-
-
-
-
-
-
-
 
 @app.callback(
     Output('bar-chart-energy-population', 'figure'),
@@ -130,7 +129,7 @@ def update_bar_chart_energy_population(country):
     fig.add_trace(go.Bar(x=consumption_data['year'], y=consumption_data['total_consumption'], name='Total Consumption (GWh)', marker_color='#08308e'))
     
     fig.add_trace(go.Scatter(x=population_data['year'], y=population_data['population'], mode='lines+markers', name='Population', line=dict(color='#E7243B'), marker=dict(size=8), yaxis='y2'))
-
+    country = convert_alpha3_full_name(country)
     fig.update_layout(
         title=f'Electricity Consumption and Population in {country} for All Years',
         xaxis=dict(title='Year'),
@@ -142,19 +141,6 @@ def update_bar_chart_energy_population(country):
     return fig
 
 
-
-
-
-
-
-
-
-
-
-
-
-
- 
 @app.callback(
     Output('bar-chart-consumption-temp', 'figure'),
     [Input('year-radio', 'value'),
@@ -180,6 +166,7 @@ def update_bar_energy_temperature_consumption(year, display, country):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(go.Bar(x=df_energy['month'], y=df_energy['gwh'], name='GWH', marker_color='#08308e',text=df_energy['gwh'],textposition='inside',textangle=0))
     fig.add_trace(go.Scatter(x=df_temp['month'], y=df_temp['temperature'], mode='lines+markers', name='Temperature', line=dict(color='#E7243B'), yaxis='y2'))
+    country = convert_alpha3_full_name(country)
     fig.update_layout(
         title=f'Electricity Consumption and Temperature in {country} for year {year}',
         xaxis=dict(title='Month'),
@@ -189,13 +176,6 @@ def update_bar_energy_temperature_consumption(year, display, country):
     )
     
     return fig
-
-
-
-
-
-
-
 
 
 @app.callback(
@@ -224,6 +204,7 @@ def update_bar_energy_temperature_production(year, display, country):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(go.Bar(x=df_energy['month'], y=df_energy['gwh'], name='GWH', marker_color='#08308e',text=df_energy['gwh'],textposition='inside',textangle=0))
     fig.add_trace(go.Scatter(x=df_temp['month'], y=df_temp['temperature'], mode='lines+markers', name='Temperature', line=dict(color='#E7243B'), yaxis='y2'))
+    country = convert_alpha3_full_name(country)
     fig.update_layout(
         title=f'Electricity Production and Temperature in {country} for year {year}',
         xaxis=dict(title='Month'),
@@ -233,11 +214,6 @@ def update_bar_energy_temperature_production(year, display, country):
     )
     
     return fig
-
-
-
-
-
 
 
 @app.callback(
@@ -265,6 +241,7 @@ def update_bar_energy_temperature_imports(year, display, country):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(go.Bar(x=df_energy['month'], y=df_energy['gwh'], name='GWH', marker_color='#08308e',text=df_energy['gwh'],textposition='inside',textangle=0))
     fig.add_trace(go.Scatter(x=df_temp['month'], y=df_temp['temperature'], mode='lines+markers', name='Temperature', line=dict(color='#E7243B'), yaxis='y2'))
+    country = convert_alpha3_full_name(country)
     fig.update_layout(
         title=f'Electricity Imports and Temperature in {country} for year {year}',
         xaxis=dict(title='Month'),
@@ -274,7 +251,6 @@ def update_bar_energy_temperature_imports(year, display, country):
     )
     
     return fig
- 
 
 
 @app.callback(
@@ -292,38 +268,39 @@ def update_production_vs_consumption(year, display, country):
         WHERE e.year='{year}' AND e.indicator IN ('Production', 'Consumption') AND e.country='{country}'
         """
     df_production_consumption = db._fetch_data(sql_production_consumption)
-
-    production_data = df_production_consumption[df_production_consumption['indicator'] == 'Production']
-    consumption_data = df_production_consumption[df_production_consumption['indicator'] == 'Consumption']
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=production_data['month'], y=production_data['gwh'], name='Production', marker_color='#E7243B'))
-    fig.add_trace(go.Bar(x=consumption_data['month'], y=consumption_data['gwh'], name='Consumption', marker_color='#08308e'))
-
-    fig.update_layout(
-        title=f'Electricity Production vs. Consumption in {country} for year {year}',
-        xaxis_title='Month',
-        yaxis_title='GWH',
-        showlegend=True,
+    country = convert_alpha3_full_name(country)
+    fig = px.bar(
+    data_frame=df_production_consumption,
+    x="month",
+    y="gwh",
+    color="indicator",
+    barmode="group",
+    color_continuous_scale="Emrld",
+    title=f'Electricity Production vs. Consumption in {country} for year {year}',
+    labels={"month": "Month", "gwh": "GWH"},
+    range_color="Emrld",
+    color_discrete_map={
+        "Production": "#c850a0",
+        "Consumption": "#1e6134"
+    }
     )
 
     return fig
 
 #custom made color scale
 indicator_colors = {
-    'Solid fossil fuels': 'rgb(149, 232, 186)',
-    'Manufactured gases': 'rgb(126, 214, 174)',
-    'Peat and peat products': 'rgb(101, 195, 157)',
-    'Oil shale and oil sands': 'rgb(78, 179, 140)',
-    'Oil and petroleum products (excluding biofuel portion)': 'rgb(56, 162, 125)',
-    'Natural gas': 'rgb(35, 146, 111)',
-    'Renewables and biofuels': 'rgb(16, 130, 99)',
-    'Non-renewable waste': 'rgb(0, 115, 84)',
-    'Nuclear heat': 'rgb(0, 100, 72)',
-    'Heat': 'rgb(0, 86, 61)',
-    'Electricity': 'rgb(0, 72, 51)'
+    'Solid fossil fuels': 'rgb(25, 25, 112)',  # Midnight Blue
+    'Manufactured gases': 'rgb(0, 0, 128)',  # Navy
+    'Peat and peat products': 'rgb(0, 0, 205)',  # Medium Blue
+    'Oil shale and oil sands': 'rgb(0, 0, 255)',  # Blue
+    'Oil and petroleum products (excluding biofuel portion)': 'rgb(70, 130, 180)',  # Steel Blue
+    'Natural gas': 'rgb(100, 149, 237)',  # Cornflower Blue
+    'Renewables and biofuels': 'rgb(135, 206, 235)',  # Sky Blue
+    'Non-renewable waste': 'rgb(106, 90, 205)',  # Slate Blue
+    'Nuclear heat': 'rgb(123, 104, 238)',  # Medium Slate Blue
+    'Heat': 'rgb(147, 112, 219)',  # Medium Purple
+    'Electricity': 'rgb(138, 43, 226)'  # Blue Violet
 }
-
 
 
 @app.callback(
@@ -348,6 +325,7 @@ def update_pie_chart(year, country, selected_indicators):
     filtered_data = data[data['indicator'].isin(selected_indicators)]
     
     # Create the pie chart with custom colors
+    country = convert_alpha3_full_name(country)
     fig = px.pie(
         filtered_data,
         names='indicator',
@@ -357,9 +335,6 @@ def update_pie_chart(year, country, selected_indicators):
         color_discrete_map=indicator_colors 
     )
     return fig
-
-
-
 
 
 @app.callback(
@@ -380,43 +355,17 @@ def get_country(clickData):
 app.layout = html.Div(children=[
     html.H1('Hello Dash!'),
     html.Div(className='row', children=[
-        html.Div(className='col-6 col-xs-12', children=[
+        html.Div(className='col-6', children=[
             html.Br(),
             dcc.Loading(id="loading-choro", type="default", children=dcc.Graph(id="choropleth", figure=update_choropleth(indicator, month, year, display_choro)))]),
-        html.Div(className='col-6 col-xs-12', children=[
-            html.Br(),
-            dcc.Loading(id="loading-bar-1", type="default", children=dcc.Graph(id='bar-chart-energy-population')),
-            html.Br(),
-            dcc.Loading(id="loading-bar-2", type="default", children=dcc.Graph(id='bar-chart-consumption-temp')),
-            html.Br(),
-            dcc.Loading(id="loading-bar-3", type="default", children=dcc.Graph(id='bar-chart-production-temp')),
-            html.Br(),
-            dcc.Loading(id="loading-bar-4", type="default", children=dcc.Graph(id='bar-chart-import-temp')),
+        html.Div(className='col-6', children=[
             html.Br(),
             dcc.Loading(id="loading-bar-5", type="default", children=dcc.Graph(id='bar-chart-production-vs-consumption')),
-            html.Br(),
-            dcc.Loading(id="loading-pie-chart", type="default", children=dcc.Graph(id='pie-chart')),
-            dcc.Checklist(
-                id='indicator-checkboxes',
-                options=[
-                    {'label': 'Solid fossil fuels', 'value': 'Solid fossil fuels'},
-                    {'label': 'Manufactured gases', 'value': 'Manufactured gases'},
-                    {'label': 'Peat and peat products', 'value': 'Peat and peat products'},
-                    {'label': 'Oil shale and oil sands', 'value': 'Oil shale and oil sands'},
-                    {'label': 'Oil and petroleum products', 'value': 'Oil and petroleum products'},
-                    {'label': 'Natural gas', 'value': 'Natural gas'},
-                    {'label': 'Renewables and biofuels', 'value': 'Renewables and biofuels'},
-                    {'label': 'Non-renewable waste', 'value': 'Non-renewable waste'},
-                    {'label': 'Nuclear heat', 'value': 'Nuclear heat'},
-                    {'label': 'Heat', 'value': 'Heat'},
-                    {'label': 'Electricity', 'value': 'Electricity'}
-                ],
-                value=['Solid fossil fuels'],  # Default selection
-             )
         ])
-    ]),
+        
+        ]),
      html.Div(className='row', children=[
-        html.Div(className="col-6 col-xs-12", children=[
+        html.Div(className="col-12", children=[
             dcc.Slider(
                 id='year-radio',
                 min=min(available_years),
@@ -425,7 +374,7 @@ app.layout = html.Div(children=[
                 value=year,
                 step=1,
             ),
-             dcc.Slider(
+            dcc.Slider(
             id='month-slider',
             marks={month: str(month) for month in range(1, 13)},
             step=1,
@@ -446,14 +395,53 @@ app.layout = html.Div(children=[
                 value='electricity_consumption',
                 searchable=False
             ),
-            html.Div(id="country")
+            html.Div(children=f'You have selected {country}', id="country")
+        ])
+    ]),
+    html.Div(className='row', children=[
+        html.Div(className='col-6', children=[
+            html.Br(),
+            dcc.Loading(id="loading-bar-1", type="default", children=dcc.Graph(id='bar-chart-energy-population')),
+            html.Br(),
+            dcc.Loading(id="loading-bar-3", type="default", children=dcc.Graph(id='bar-chart-production-temp')),
+            html.Br(),
+            dcc.Checklist(
+                id='indicator-checkboxes',
+                className="source-checklist",
+                options=[
+                    {'label': 'Solid fossil fuels', 'value': 'Solid fossil fuels'},
+                    {'label': 'Manufactured gases', 'value': 'Manufactured gases'},
+                    {'label': 'Peat and peat products', 'value': 'Peat and peat products'},
+                    {'label': 'Oil shale and oil sands', 'value': 'Oil shale and oil sands'},
+                    {'label': 'Oil and petroleum products', 'value': 'Oil and petroleum products'},
+                    {'label': 'Natural gas', 'value': 'Natural gas'},
+                    {'label': 'Renewables and biofuels', 'value': 'Renewables and biofuels'},
+                    {'label': 'Non-renewable waste', 'value': 'Non-renewable waste'},
+                    {'label': 'Nuclear heat', 'value': 'Nuclear heat'},
+                    {'label': 'Heat', 'value': 'Heat'},
+                    {'label': 'Electricity', 'value': 'Electricity'}
+                ],
+                value=['Solid fossil fuels', 'Manufactured gases', 'Peat and peat products', 'Oil shale and oil sands', 'Oil and petroleum products', 'Natural gas', 'Renewables and biofuels', 'Non-renewable waste', 'Nuclear heat', 'Heat', 'Electricity']  # Default selection
+             )
+        ]),
+        html.Div(className='col-6', children=[
+            html.Br(),
+            dcc.Loading(id="loading-bar-2", type="default", children=dcc.Graph(id='bar-chart-consumption-temp')),
+            html.Br(),
+            dcc.Loading(id="loading-bar-4", type="default", children=dcc.Graph(id='bar-chart-import-temp')),
+            html.Br(),
+            dcc.Loading(id="loading-pie-chart", type="default", children=dcc.Graph(id='pie-chart'))
         ])
     ])
 ])
 
 if __name__ == '__main__':
     print("Started")
-    app.run_server(debug=False, host="0.0.0.0", port=8080)
+    app.run_server(debug=True, host="0.0.0.0", port=8080)
     # Casper: 172.19.0.3
     # Thomas: 127.0.0.1:8080
     # Alle andere: 127.0.0.1
+
+
+
+   
