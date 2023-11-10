@@ -358,8 +358,6 @@ def get_country(clickData):
 
 
 app.layout = html.Div(children=[
-    html.Link(rel='stylesheet',
-                href='dashboard\stylesheet.css'),
     html.H1('Data Detectives Dashboard'),
     html.Div(className='row', children=[
         html.Div(className='col', children=[
