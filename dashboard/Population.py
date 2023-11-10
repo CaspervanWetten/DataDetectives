@@ -10,6 +10,7 @@ def DownloadPopulationData(csv=False):
         df.columns = df.columns.str.replace("YR", "") #By default the columns are named like "YR2011" but we want just "2011" (Data cleaning!)
         df = df.melt(id_vars=['country'], var_name='year', value_name='population').sort_values(["year", "country"])
         df['population'] = df['population'].astype(int) #The population value defaults to a float (probably because some Americans only count as 2/3th) so we convert them to integers here
+        df['year'] = df['year'].astype(int) #The year value is currently an object, but columns cannot be joined if they have different types.
         if csv: # 
             df.to_csv("csv/Population.csv")
         return df
