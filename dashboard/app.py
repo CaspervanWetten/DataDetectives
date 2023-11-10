@@ -1,14 +1,15 @@
 import dash
+import pycountry
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from Predictions import generate_fig
 from dash import dcc
 from dash import html
 from dash.dependencies import Input, Output
 from plotly.subplots import make_subplots 
 from Database import Database
 from time import sleep
-import pycountry
 
 def convert_alpha3_full_name(alpha3_code):
     try:
@@ -67,7 +68,7 @@ def update_choropleth(indicator, month, year, display):
             WHERE year='{year}' AND indicator='{indicator}' AND month='{month}'
             """
     df = db._fetch_data(sql)
-    sleep(0.1)
+    sleep(0.2)
     fig = px.choropleth(df, 
                         locations="country", 
                         color='gwh',
@@ -119,6 +120,7 @@ def update_bar_chart_energy_population(country):
         GROUP BY year
     """
     consumption_data = db._fetch_data(sql_energy_consumption)
+    sleep(0.5)
 
     # Fetch population data for the selected country for all years from the population dataset
     sql_population = f"""
@@ -145,6 +147,33 @@ def update_bar_chart_energy_population(country):
 
     return fig
 
+@app.callback(
+    Output('predicted', 'figure'),
+    [Input('indic-dropdown', 'value'),
+    Input('country', 'children'),
+    Input('display-mode-dropdown', 'value')]
+)
+def update_predicted(indicator, country, display):
+    if country == "":
+        return create_empty_figure("")
+    sql = f"""
+        SELECT * 
+        FROM {display}
+        WHERE country = '{country}' AND indicator = '{indicator}'
+        """
+    df = db._fetch_data(sql)
+    sleep(0.5)
+    
+    results = generate_fig(df)
+    country = convert_alpha3_full_name(country)
+    display_dict = {
+        "energy_capita" : "Electricity consumption per capita",
+        "electricity_consumption" : "Electricity"
+    }
+    # print(df.head(35))
+    display = display_dict[display]
+    fig = px.line(results, x = "DATE",y ="gwh", color = "predict", title=f"Prediction of the {display} {indicator} for {country} for the coming year" )
+    return fig
 
 @app.callback(
     Output('bar-chart-consumption-temp', 'figure'),
@@ -203,7 +232,6 @@ def update_bar_energy_temperature_production(year, display, country):
             """
     df_temp = db._fetch_data(sql_temp)
     df_energy = db._fetch_data(sql_energy)
-    #print(df_energy)
     sleep(0.5)
  
     fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -273,6 +301,8 @@ def update_production_vs_consumption(year, display, country):
         WHERE e.year='{year}' AND e.indicator IN ('Production', 'Consumption') AND e.country='{country}'
         """
     df_production_consumption = db._fetch_data(sql_production_consumption)
+    sleep(0.5)
+
     country = convert_alpha3_full_name(country)
     fig = px.bar(
     data_frame=df_production_consumption,
@@ -392,6 +422,7 @@ def update_average_consumption_change(year, country):
     consumption_previous = db._fetch_data(sql_consumption_previous).iloc[0]
 
     change = (consumption_current - consumption_previous) / consumption_previous * 100
+    sleep(0.5)
 
     return f'Change in consumption for {year} vs. previous year: {change:.2f}%'
 
@@ -522,6 +553,10 @@ app.layout = html.Div(children=[
             html.Br(),
             dcc.Loading(id="loading-pie-chart", type="default", children=dcc.Graph(id='pie-chart', className="bars"))
         ])
+    ]),
+    html.Div(className='row', children=[
+        html.Hr(),
+        dcc.Loading(dcc.Graph(id='predicted', className='bars'))
     ])
 ])
 
