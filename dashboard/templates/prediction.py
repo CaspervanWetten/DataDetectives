@@ -55,22 +55,22 @@ def random_forest_predict(df):
 
     return yhat
 
-def prediction(df):
+def prediction(df, country, indicator):
     df.drop("Unnamed: 0", axis = 1, inplace = True)  # dit 
     df['DATE'] = pd.to_datetime(df[['year', 'month']].assign(day=1))
     df.drop("year", axis = 1, inplace= True)
     df.drop("month", axis = 1, inplace = True)
     dcountry = "AUT"
     dindicator = "Consumption"
-    df = df[(df["country"] == dcountry) & (df["indicator"] == dindicator)]
+    df = df[(df["country"] == country) & (df["indicator"] == indicator)]
     #dfpred["DATE"] = dfpred["DATE"].astype(str)
     dfpred2 = df[["DATE","gwh"]]
     dfpred2.set_index('DATE', inplace = True)
     prediction = random_forest_predict(dfpred2)
     return prediction, dfpred2
     
-def show_plot(df):
-    predresult = prediction(df)
+def show_plot(df, country, indicator):
+    predresult = prediction(df, country, indicator)
     resultsplot = predresult[1]
     resultsplot = resultsplot.reset_index()
     resultsplot["DATE"] = pd.to_datetime(resultsplot["DATE"])
