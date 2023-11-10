@@ -11,7 +11,7 @@ from pandas import concat
 from sklearn.metrics import mean_absolute_error
 from matplotlib import pyplot
 
-# Dit is de hoe de dfpred wordt gegenereerd als je show_plot aanroept en de query die hieronderstaat hieraan meegeeft zou het moeten werken
+# Dit is de hoe de dfpred wordt gegenereerd als je show_plot aanroept en de query die hieronderstaat hieraan meegeeft zou het moeten werken en de country en indicator meegeven
 
 #query_6 = '''SELECT * FROM electricity_consumption'''
 #con = engine.connect()
