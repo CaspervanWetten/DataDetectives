@@ -51,7 +51,9 @@ country=""
 
 def create_empty_figure(title='Select a Country in the choropleth to view data'):
     fig = go.Figure()
-    fig.update_layout(title='Select a Country in the choropleth to view data', showlegend=False)
+    fig.update_layout(title='Select a Country in the choropleth to view data', 
+                      showlegend=False,
+                      font=dict(color="#264A75"))
     return fig
 
 # Update the choropleth figure
@@ -96,13 +98,13 @@ def update_choropleth(indicator, month, year, display):
         ),
         title= f'GWH {indicator} in Europe for the month {month} in the year {year}',
         dragmode=False,
-        # plot_bgcolor='rgba(39, 41, 83, 1)',
-        # paper_bgcolor='rgba(39, 41, 83, 1)',
-        width=1800, 
-        height=700
+        height=700,
+        font=dict(color="#264A75")
         )
 
     return fig
+
+
 
 @app.callback(
     Output('bar-chart-energy-population', 'figure'),
@@ -143,6 +145,7 @@ def update_bar_chart_energy_population(country):
         yaxis=dict(title='Total Consumption (GWh)', side='left'),
         yaxis2=dict(title='Total Population', side='right', overlaying='y', showgrid=False),
         showlegend=True,
+        font=dict(color="#264A75")
     )
 
     return fig
@@ -207,6 +210,7 @@ def update_bar_energy_temperature_consumption(year, display, country):
         yaxis=dict(title='GWH', side='left'),
         yaxis2=dict(title='Temperature (°C)', side='right', overlaying='y', showgrid=False),
         showlegend=True,
+        font=dict(color="#264A75")
     )
     
     return fig
@@ -244,6 +248,7 @@ def update_bar_energy_temperature_production(year, display, country):
         yaxis=dict(title='GWH', side='left'),
         yaxis2=dict(title='Temperature (°C)', side='right', overlaying='y', showgrid=False),
         showlegend=True,
+        font=dict(color="#264A75")
     )
     
     return fig
@@ -281,6 +286,7 @@ def update_bar_energy_temperature_imports(year, display, country):
         yaxis=dict(title='GWH', side='left'),
         yaxis2=dict(title='Temperature (°C)', side='right', overlaying='y', showgrid=False),
         showlegend=True,
+        font=dict(color="#264A75")
     )
     
     return fig
@@ -515,17 +521,19 @@ app.layout = html.Div(children=[
                 options=[{'label': indic, 'value': indic} for indic in ec_df['indicator'].unique()],
                 value=ec_df['indicator'].unique()[0],
                 searchable=False,
-                className='selectors'
+                className='selectors',
+                style={'color': '#264A75'}
             ),
             dcc.Dropdown(
                 id='display-mode-dropdown',
                 options=[
-                    {'label': 'Total GWH', 'value': 'electricity_consumption'},
-                    {'label': 'GWH per capita', 'value': 'energy_capita'},
+                    {'label': 'Total GWH', 'value': 'electricity_consumption', 'style': {'color': '#264A75'}},
+                    {'label': 'GWH per capita', 'value': 'energy_capita', 'style': {'color': '#264A75'}},
                 ],
                 value='electricity_consumption',
                 searchable=False,
-                className='selectors'
+                className='selectors',
+                style={'color': '#264A75'}
             ),
             html.Div(id="country-container", children=[
                 'You have selected:',
@@ -562,7 +570,7 @@ app.layout = html.Div(children=[
 
 if __name__ == '__main__':
     print("Started")
-    app.run_server(debug=True, host="172.19.0.3", port=8080)
+    app.run_server(debug=False, host="0.0.0.0", port=8080)
     # Casper: 172.19.0.3
     # Thomas: 127.0.0.1:8080
     # Alle andere: 127.0.0.1
