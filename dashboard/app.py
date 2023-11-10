@@ -317,27 +317,25 @@ indicator_colors = {
 def update_pie_chart(year, country, selected_indicators):
     if country == "":
         return create_empty_figure("")
-    
-    # Query the database to get data for the selected country and year
     sql = f"""
         SELECT indicator, ktoe
         FROM electricity_types
         WHERE year='{year}' AND country='{country}'
         """
     data = db._fetch_data(sql)
-    
-    # Filter data based on selected indicators
     filtered_data = data[data['indicator'].isin(selected_indicators)]
-    
-    # Create the pie chart with custom colors
     country = convert_alpha3_full_name(country)
     fig = px.pie(
         filtered_data,
         names='indicator',
         values='ktoe',
-        title=f'Electricity Type Distribution in {country} for year {year}',
+        title=f'Electricity Type Distribution in {country} for the year {year}',
         color='indicator',  
         color_discrete_map=indicator_colors 
+    )
+    if selected_indicators == []:
+        fig = px.pie(
+        title=f'There is no detailed source breakdown available for {country} in {year}',
     )
     return fig
 
@@ -353,7 +351,105 @@ def get_country(clickData):
     country = clickData["points"][0]['location']
     return country 
 
+@app.callback(
+    Output('indicator-checkboxes', "value"),
+    [Input('year-radio', 'value'),
+     Input('country', 'children'),]
+)
+def get_used_sources(year, country):
+    sql = f"""
+        SELECT indicator, ktoe
+        FROM electricity_types
+        WHERE year='{year}' AND country='{country}'
+        """
+    data = db._fetch_data(sql)
+    options = data[data['ktoe'] != 0]['indicator'].unique().tolist()
+    if "Total" in options:
+        options.remove("Total")
+    return options
 
+@app.callback(
+    Output('average-consumption-change', 'children'),
+    [Input('year-radio', 'value'),
+     Input('country', 'children')]
+)
+def update_average_consumption_change(year, country):
+    if country == "":
+        return ""
+
+    sql_consumption_current = f"""
+        SELECT SUM(gwh) as total_consumption
+        FROM electricity_consumption
+        WHERE year = '{year}' AND indicator='Consumption' AND country='{country}'
+    """
+    consumption_current = db._fetch_data(sql_consumption_current).iloc[0]
+ 
+    sql_consumption_previous = f"""
+        SELECT SUM(gwh) as total_consumption
+        FROM electricity_consumption
+        WHERE year = '{int(year) - 1}' AND indicator='Consumption' AND country='{country}'
+    """
+    consumption_previous = db._fetch_data(sql_consumption_previous).iloc[0]
+
+    change = (consumption_current - consumption_previous) / consumption_previous * 100
+
+    return f'Change in consumption for {year} vs. previous year: {change:.2f}%'
+
+
+@app.callback(
+    Output('average-production-change', 'children'),
+    [Input('year-radio', 'value'),
+     Input('country', 'children')]
+)
+def update_average_production_change(year, country):
+    if country == "":
+        return ""
+
+    sql_production_current = f"""
+        SELECT SUM(gwh) as total_production
+        FROM electricity_consumption
+        WHERE year = '{year}' AND indicator='Production' AND country='{country}'
+    """
+    production_current = db._fetch_data(sql_production_current).iloc[0]
+
+    sql_production_previous = f"""
+        SELECT SUM(gwh) as total_production
+        FROM electricity_consumption
+        WHERE year = '{int(year) - 1}' AND indicator='Production' AND country='{country}'
+    """
+    production_previous = db._fetch_data(sql_production_previous).iloc[0]
+
+    change = (production_current - production_previous) / production_previous * 100
+
+    return f'Change in production for {year} vs. previous year: {change:.2f}%'
+
+@app.callback(
+    Output('average-import-change', 'children'),
+    [Input('year-radio', 'value'),
+     Input('country', 'children')]
+)
+def update_average_import_change(year, country):
+    if country == "":
+        return ""
+
+    sql_import_current = f"""
+        SELECT SUM(gwh) as total_import
+        FROM electricity_consumption
+        WHERE year = '{year}' AND indicator='Imports' AND country='{country}'
+    """
+    import_current = db._fetch_data(sql_import_current).iloc[0]
+
+    sql_import_previous = f"""
+        SELECT SUM(gwh) as total_import
+        FROM electricity_consumption
+        WHERE year = '{int(year) - 1}' AND indicator='Imports' AND country='{country}'
+    """
+    import_previous = db._fetch_data(sql_import_previous).iloc[0]
+
+
+    change = (import_current - import_previous) / import_previous * 100
+
+    return f'Change in imports for {year} vs. previous year: {change:.2f}%'
 
 
 
@@ -364,17 +460,18 @@ app.layout = html.Div(children=[
             html.Br(),
             dcc.Loading(id="loading-choro", type="default", children=dcc.Graph(id="choropleth", className="choropleth", figure=update_choropleth(indicator, month, year, display_choro)))]),     
         ]),
+    html.Nav(className="navbar sticky-top bg-dark", children=[
+                dcc.Slider(
+                        id='year-radio',
+                        min=min(available_years),
+                        max=max(available_years),
+                        marks={int(year) : str(year) for year in available_years},
+                        value=year,
+                        step=1,
+                        className='selectors navbar-improved'),
+                        ]),
      html.Div(className='row', children=[
         html.Div(className="col-12", children=[
-            dcc.Slider(
-                id='year-radio',
-                min=min(available_years),
-                max=max(available_years),
-                marks={int(year) : str(year) for year in available_years},
-                value=year,
-                step=1,
-                className='selectors'
-            ),
             dcc.Slider(
                 id='month-slider',
                 marks={month: str(month) for month in range(1, 13)},
@@ -399,7 +496,12 @@ app.layout = html.Div(children=[
                 searchable=False,
                 className='selectors'
             ),
-            html.Div(children=f'You have selected {country}', id="country")
+            html.Div(id="country-container", children=[
+                'You have selected:',
+                html.Div(id='country')
+            ]),
+            html.Div(id='average-consumption-change', className='text-display'),html.Div(id='average-production-change', className='text-display'),
+            html.Div(id='average-import-change', className='text-display')
         ])
     ]),
     html.Div(className='row', children=[
@@ -410,25 +512,7 @@ app.layout = html.Div(children=[
             dcc.Loading(id="loading-bar-3", type="default", children=dcc.Graph(id='bar-chart-production-temp', className="bars")),
             html.Br(),
             dcc.Loading(id="loading-bar-5", type="default", children=dcc.Graph(id='bar-chart-production-vs-consumption', className="bars")),
-            html.Br(),
-            dcc.Checklist(
-                id='indicator-checkboxes',
-                className="source-checklist",
-                options=[
-                    {'label': 'Solid fossil fuels', 'value': 'Solid fossil fuels'},
-                    {'label': 'Manufactured gases', 'value': 'Manufactured gases'},
-                    {'label': 'Peat and peat products', 'value': 'Peat and peat products'},
-                    {'label': 'Oil shale and oil sands', 'value': 'Oil shale and oil sands'},
-                    {'label': 'Oil and petroleum products', 'value': 'Oil and petroleum products'},
-                    {'label': 'Natural gas', 'value': 'Natural gas'},
-                    {'label': 'Renewables and biofuels', 'value': 'Renewables and biofuels'},
-                    {'label': 'Non-renewable waste', 'value': 'Non-renewable waste'},
-                    {'label': 'Nuclear heat', 'value': 'Nuclear heat'},
-                    {'label': 'Heat', 'value': 'Heat'},
-                    {'label': 'Electricity', 'value': 'Electricity'}
-                ],
-                value=['Solid fossil fuels', 'Manufactured gases', 'Peat and peat products', 'Oil shale and oil sands', 'Oil and petroleum products', 'Natural gas', 'Renewables and biofuels', 'Non-renewable waste', 'Nuclear heat', 'Heat', 'Electricity']  # Default selection
-             )
+            dcc.Checklist(id='indicator-checkboxes',)
         ]),
         html.Div(className='col-6', children=[
             html.Br(),

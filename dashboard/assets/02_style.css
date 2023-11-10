@@ -4,7 +4,8 @@ body {
     text-align: center;
     margin: 0;
     padding: 0;
-    color: #9b9b9b
+    color: #9b9b9b;
+    overflow-x: hidden;
 
 }
 
@@ -14,6 +15,16 @@ h1 {
 
 p {
     color: #666;
+}
+
+.navbar {
+    display: inline;
+}
+
+.navbar-improved{
+    background: #fff;
+    /* box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2); */
+    margin-top: 3%;
 }
 
 .choropleth {
