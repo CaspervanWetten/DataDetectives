@@ -1,9 +1,11 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
+    background-color: F3F4F8;
     text-align: center;
     margin: 0;
     padding: 0;
+    color: #9b9b9b
+
 }
 
 h1 {
@@ -15,17 +17,32 @@ p {
 }
 
 .choropleth {
-    float: left;
-    height: fit-content;
-    margin-top: 2%;
-    margin-left: 3%;
-    padding-right: 8px;
-    border: thin solid black;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
-    border-radius: 50px;
+    margin: 3%;
+    margin-top: 0;
+    height: fit-content;    
+    border-radius: 15px;
     overflow: hidden;
     background: #fff;
+    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
 
+}
+.bars {
+    margin: 3%;
+    height: fit-content;    
+    border-radius: 15px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+}
+
+.selectors{
+    padding-top: 15px;
+    margin-left: 5%;
+    margin-right: 5%;
+    height: fit-content;    
+    border-radius: 5px;
+    /* box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1); */
+    
 }
 
 .GWH {

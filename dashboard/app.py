@@ -83,7 +83,8 @@ def update_choropleth(indicator, month, year, display):
         showcountries=True, countrycolor="Black",
         fitbounds="locations",
         center=dict(lat=51.1657, lon=10.4515),
-        projection_scale=15         
+        projection_scale=15,
+        oceancolor='rgba(0,0,255,1)'       
     )
     #TODO Add display check to change title
     fig.update_layout(
@@ -93,7 +94,11 @@ def update_choropleth(indicator, month, year, display):
             projection_type='equirectangular'
         ),
         title= f'GWH {indicator} in Europe for the month {month} in the year {year}',
-        dragmode=False
+        dragmode=False,
+        # plot_bgcolor='rgba(39, 41, 83, 1)',
+        # paper_bgcolor='rgba(39, 41, 83, 1)',
+        width=1800, 
+        height=700
         )
 
     return fig
@@ -357,14 +362,9 @@ app.layout = html.Div(children=[
                 href='dashboard\stylesheet.css'),
     html.H1('Data Detectives Dashboard'),
     html.Div(className='row', children=[
-        html.Div(className='col-6', children=[
+        html.Div(className='col', children=[
             html.Br(),
-            dcc.Loading(id="loading-choro", type="default", children=dcc.Graph(id="choropleth", figure=update_choropleth(indicator, month, year, display_choro)))]),
-        html.Div(className='col-6', children=[
-            html.Br(),
-            dcc.Loading(id="loading-bar-5", type="default", children=dcc.Graph(id='bar-chart-production-vs-consumption')),
-        ])
-        
+            dcc.Loading(id="loading-choro", type="default", children=dcc.Graph(id="choropleth", className="choropleth", figure=update_choropleth(indicator, month, year, display_choro)))]),     
         ]),
      html.Div(className='row', children=[
         html.Div(className="col-12", children=[
@@ -375,18 +375,21 @@ app.layout = html.Div(children=[
                 marks={int(year) : str(year) for year in available_years},
                 value=year,
                 step=1,
+                className='selectors'
             ),
             dcc.Slider(
-            id='month-slider',
-            marks={month: str(month) for month in range(1, 13)},
-            step=1,
-            value = 6,
+                id='month-slider',
+                marks={month: str(month) for month in range(1, 13)},
+                step=1,
+                value = 6,
+                className='selectors'
              ),
             dcc.Dropdown(
                 id='indic-dropdown',
                 options=[{'label': indic, 'value': indic} for indic in ec_df['indicator'].unique()],
                 value=ec_df['indicator'].unique()[0],
-                searchable=False
+                searchable=False,
+                className='selectors'
             ),
             dcc.Dropdown(
                 id='display-mode-dropdown',
@@ -395,7 +398,8 @@ app.layout = html.Div(children=[
                     {'label': 'GWH per capita', 'value': 'energy_capita'},
                 ],
                 value='electricity_consumption',
-                searchable=False
+                searchable=False,
+                className='selectors'
             ),
             html.Div(children=f'You have selected {country}', id="country")
         ])
@@ -403,9 +407,11 @@ app.layout = html.Div(children=[
     html.Div(className='row', children=[
         html.Div(className='col-6', children=[
             html.Br(),
-            dcc.Loading(id="loading-bar-1", type="default", children=dcc.Graph(id='bar-chart-energy-population')),
+            dcc.Loading(id="loading-bar-1", type="default", children=dcc.Graph(id='bar-chart-energy-population', className="bars")),
             html.Br(),
-            dcc.Loading(id="loading-bar-3", type="default", children=dcc.Graph(id='bar-chart-production-temp')),
+            dcc.Loading(id="loading-bar-3", type="default", children=dcc.Graph(id='bar-chart-production-temp', className="bars")),
+            html.Br(),
+            dcc.Loading(id="loading-bar-5", type="default", children=dcc.Graph(id='bar-chart-production-vs-consumption', className="bars")),
             html.Br(),
             dcc.Checklist(
                 id='indicator-checkboxes',
@@ -428,18 +434,18 @@ app.layout = html.Div(children=[
         ]),
         html.Div(className='col-6', children=[
             html.Br(),
-            dcc.Loading(id="loading-bar-2", type="default", children=dcc.Graph(id='bar-chart-consumption-temp')),
+            dcc.Loading(id="loading-bar-2", type="default", children=dcc.Graph(id='bar-chart-consumption-temp', className="bars")),
             html.Br(),
-            dcc.Loading(id="loading-bar-4", type="default", children=dcc.Graph(id='bar-chart-import-temp')),
+            dcc.Loading(id="loading-bar-4", type="default", children=dcc.Graph(id='bar-chart-import-temp', className="bars")),
             html.Br(),
-            dcc.Loading(id="loading-pie-chart", type="default", children=dcc.Graph(id='pie-chart'))
+            dcc.Loading(id="loading-pie-chart", type="default", children=dcc.Graph(id='pie-chart', className="bars"))
         ])
     ])
 ])
 
 if __name__ == '__main__':
     print("Started")
-    app.run_server(debug=True, host="127.0.0.1", port=8080)
+    app.run_server(debug=True, host="172.19.0.3", port=8080)
     # Casper: 172.19.0.3
     # Thomas: 127.0.0.1:8080
     # Alle andere: 127.0.0.1
