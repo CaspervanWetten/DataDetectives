@@ -18,3 +18,5 @@ wbgapi
 dash
 matplotlib
 scikit-learn
+diskcache
+psutil
