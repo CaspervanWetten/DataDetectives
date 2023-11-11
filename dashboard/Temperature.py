@@ -178,8 +178,6 @@ def TemperatureDownloader(db, csv=False):
             df['month'] = df['date'].dt.month
             df['country'] = country #Add a country column with the value of the current country
             df = df[["country", "year", "month", "temperature"]] #I wanted to have all dataframes in (more or less) the same order. No I'm not autistic and thinking such questions is rude >:£
-            print(f"Final df for {country}: ")
-            print(df.head(20))
             db._load_data(exists="append", temperature=df) #Append the currently existing temperature table (which will be empty at the start of the loop) with the newly generated dataframe
             
         toClean = [os.path.join(folderPath, file) for file in os.listdir(folderPath) if file.endswith(".txt") or file.endswith(".zip")] #Remove the leftover .txt and .zip files, which total to about ~4 gigs

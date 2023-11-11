@@ -47,5 +47,5 @@ def TypesOfEnergy(csv=False):
             df.to_csv("csv/TypesOfElectricity.csv")
         return df
     except Exception as e:
-        return f"quit with \n{e} \nas error"
+        print(f"quit with \n{e} \nas error")
 
