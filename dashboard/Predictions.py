@@ -52,7 +52,6 @@ def random_forest_predict(df):
 def prediction(df):
     df['DATE'] = pd.to_datetime(df[['year', 'month']].assign(day=1))
     df = df.sort_values(by=["DATE"])
-    print(df.head(35))
     dfpred2 = df[["DATE","gwh"]]
     dfpred2.set_index('DATE', inplace = True)
     prediction = random_forest_predict(dfpred2)
