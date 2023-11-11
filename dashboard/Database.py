@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine, MetaData, inspect
 from Electricty import MonthlyElectricity, TypesOfEnergy
 from Temperature import TemperatureDownloader
 from Population import DownloadPopulationData
@@ -29,6 +29,16 @@ class Database:
         self.engine = create_engine("postgresql://student:infomdss@db_dashboard:5432/dashboard")
         self.metadata = MetaData()
         self.metadata.reflect(self.engine)
+        self.inspector = inspect(self.engine)
+
+    def _drop_all_tables(self):
+        """
+        Drops all tables in the database
+        """
+        self.metadata.reflect(self.engine)
+        for table in reversed(self.metadata.sorted_tables):
+            table.drop(self.engine)
+        self.metadata.reflect(self.engine)
 
     def _update_database(self):
         print("dropping old data...")
@@ -40,34 +50,44 @@ class Database:
         print("Downloading new segregated electricity data...") #shit am I racist????
         self._load_data(electricity_types=TypesOfEnergy())
         print("Calculating the per capita energy") 
-        self._load_data(consumption_capita = caculate_per_capita(self._fetch_data("SELECT * FROM population"), self._fetch_data("SELECT * FROM electricity_consumption")))
+        self._load_data(energy_capita = caculate_per_capita(self._fetch_data("SELECT * FROM population"), self._fetch_data("SELECT * FROM electricity_consumption")))
         #The temperature data appends the database, hence why it passes the database as a self object
         TemperatureDownloader(db=self)
         self.metadata.reflect(self.engine)
+        self.inspector = inspect(self.engine)
+
+    def is_empty(self):
+        table_list = ["electricity_consumption", "electricity_types", "energy_capita", "population", "temperature"]
+        for table in table_list:
+            if not self.inspector.has_table(table):
+                print(f"Couldn't find table {table}")
+                print("Database seems to be unpopulated, populating database....")
+                return True
+            if self._fetch_data(f"SELECT * FROM {table}").empty:
+                print(f"{table} is empty")
+                print("Database seems to be unpopulated, populating database....")
+                return True
+        return False
 
     def _update_database_csv(self):
-        print("dropping old data...")
-        self._drop_all_tables()
-        print("Getting population data...")
-        self._load_data(population=pd.read_csv("csv/population.csv", index_col="index"))
-        print("Getting monthly electricity data...")
-        self._load_data(electricity_consumption=pd.read_csv("csv/electricity_consumption.csv", index_col="index"))
-        print("Getting segregated electricity data...")
-        self._load_data(electricity_types=pd.read_csv("csv/electricity_types.csv", index_col="index"))
-        print("Getting temperature data...") 
-        self._load_data(temperature=pd.read_csv("csv/temperature.csv", index_col="index"))
-        print("Calculating the per capita energy") 
-        self._load_data(energy_capita = caculate_per_capita(self._fetch_data("SELECT * FROM population"), self._fetch_data("SELECT * FROM electricity_consumption")))
-        self.metadata.reflect(self.engine)
-
-    def _drop_all_tables(self):
-        """
-        Drops all tables in the database
-        """
-        self.metadata.reflect(self.engine)
-        for table in reversed(self.metadata.sorted_tables):
-            table.drop(self.engine)
-        self.metadata.reflect(self.engine)
+        try:
+            print("dropping old data...")
+            self._drop_all_tables()
+            print("Getting population data...")
+            self._load_data(population=pd.read_csv("csv/population.csv", index_col="index"))
+            print("Getting monthly electricity data...")
+            self._load_data(electricity_consumption=pd.read_csv("csv/electricity_consumption.csv", index_col="index"))
+            print("Getting segregated electricity data...")
+            self._load_data(electricity_types=pd.read_csv("csv/electricity_types.csv", index_col="index"))
+            print("Getting temperature data...") 
+            self._load_data(temperature=pd.read_csv("csv/temperature.csv", index_col="index"))
+            print("Calculating the per capita energy") 
+            self._load_data(energy_capita = caculate_per_capita(self._fetch_data("SELECT * FROM population"), self._fetch_data("SELECT * FROM electricity_consumption")))
+            self.metadata.reflect(self.engine)
+            self.inspector = inspect(self.engine)
+        except Exception as e:
+            print(f"Can't populate data from csv files due to \n{e}\nPopulating data from pipeline instead...")
+            self._update_database()
 
     def _to_csv(self):
         if not os.path.exists('csv'):
@@ -86,6 +106,7 @@ class Database:
         for key, value in kwargs.items():
             value.to_sql(str(key), self.engine, if_exists=exists, index=True)
         self.metadata = MetaData()
+        self.inspector = inspect(self.engine)
 
     def _fetch_data(self, query):
         """
