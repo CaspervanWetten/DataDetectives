@@ -1,15 +1,16 @@
 import dash
 import pycountry
+import diskcache
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from Predictions import generate_fig
-from dash import dcc
-from dash import html
+from dash import dcc, html, DiskcacheManager
 from dash.dependencies import Input, Output
 from plotly.subplots import make_subplots 
 from Database import Database
 from time import sleep
+from threading import Thread
 
 def convert_alpha3_full_name(alpha3_code):
     try:
@@ -18,22 +19,16 @@ def convert_alpha3_full_name(alpha3_code):
         print(e)
         return ""
 
-
-app = dash.Dash(__name__)
+cache = diskcache.Cache("./cache")
+app = dash.Dash(__name__, background_callback_manager=DiskcacheManager(cache))
 server = app.server
 app.css.config.serve_locally = True
 app.scripts.config.serve_locally = True
 app.title="Datadatectives dashboard"
 
 db = Database()
-
-if False:
-    db._update_database()
-
-if False:
+if db.is_empty():
     db._update_database_csv()
-
-if False:
     db._to_csv()
 
 ec_df = db._fetch_data("SELECT * FROM electricity_consumption")
@@ -77,7 +72,6 @@ def update_choropleth(indicator, month, year, display):
                         hover_name="country",
                         color_continuous_scale="Emrld",
                         scope="europe",
-                        #range_color='gwh',
                         title=f"{indicator} for {year} and {display}"
                         )
 
@@ -173,7 +167,6 @@ def update_predicted(indicator, country, display):
         "energy_capita" : "Electricity consumption per capita",
         "electricity_consumption" : "Electricity"
     }
-    # print(df.head(35))
     display = display_dict[display]
     fig = px.line(results, x = "DATE",y ="gwh", color = "predict", title=f"Prediction of the {display} {indicator} for {country} for the coming year" )
     return fig
@@ -489,6 +482,38 @@ def update_average_import_change(year, country):
     return f'Change in imports for {year} vs. previous year: {change:.2f}%'
 
 
+@app.callback(
+    output=Output("paragraph_id", "children"),
+    inputs=Input("button_id", "n_clicks"),
+    background=True,
+    running=[
+        (Output("button_id", "disabled"), True, False),
+        (
+            Output("paragraph_id", "style"),
+            {"visibility": "hidden"},
+            {"visibility": "visible"},
+        ),
+        (
+            Output("progress_bar", "style"),
+            {"visibility": "visible"},
+            {"visibility": "visible"},
+        )
+    ],
+    progress=[Output("progress_bar", "value"), Output("progress_bar", "max")],
+    prevent_initial_call=True
+)
+def update_data(set_progress, n_clicks):
+    if n_clicks <= 1:
+        return "Note, this can be a lengthy process depending on your internet speed and CPU power, click again to continue"
+    thread = Thread(target=db._update_database)
+    thread.start()
+
+    for i in range(900):
+        set_progress((str(i), str(900)))
+        sleep(1)
+    db._to_csv()
+    thread.join()
+
 
 app.layout = html.Div(children=[
     html.H1('Data Detectives Dashboard'),
@@ -527,8 +552,8 @@ app.layout = html.Div(children=[
             dcc.Dropdown(
                 id='display-mode-dropdown',
                 options=[
-                    {'label': 'Total GWH', 'value': 'electricity_consumption', 'style': {'color': '#264A75'}},
-                    {'label': 'GWH per capita', 'value': 'energy_capita', 'style': {'color': '#264A75'}},
+                    {'label': 'Total GWH', 'value': 'electricity_consumption'},
+                    {'label': 'GWH per capita', 'value': 'energy_capita'},
                 ],
                 value='electricity_consumption',
                 searchable=False,
@@ -565,12 +590,15 @@ app.layout = html.Div(children=[
     html.Div(className='row', children=[
         html.Hr(),
         dcc.Loading(dcc.Graph(id='predicted', className='bars'))
-    ])
+    ]),
+    html.Div([html.P(id="paragraph_id", children=[""],), html.Progress(id="progress_bar", value="0", className="progress progress-bar"),]
+        ),
+        html.Button(id="button_id", children="Run Job!", className="btn btn-outline-secondary"),
 ])
 
 if __name__ == '__main__':
-    print("Started")
-    app.run_server(debug=False, host="0.0.0.0", port=8080)
+    print("Starting the application....")
+    app.run_server(debug=True, host="0.0.0.0", port=8080)
     # Casper: 172.19.0.3
     # Thomas: 127.0.0.1:8080
     # Alle andere: 127.0.0.1

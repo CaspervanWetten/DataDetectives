@@ -75,3 +75,15 @@ p {
     text-align: right;
     margin: 5%;
 }
+
+.btn {
+    margin-bottom: 15px;
+}
+
+.progress {
+    width: 33%;
+    display: inline-block;
+    margin-bottom: 13px;
+    background-color: revert;
+    height: 20px;
+}
