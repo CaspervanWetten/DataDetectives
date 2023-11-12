@@ -46,7 +46,7 @@ country=""
 
 def create_empty_figure(title='Select a Country in the choropleth to view data'):
     fig = go.Figure()
-    fig.update_layout(title='Select a Country in the choropleth to view data', 
+    fig.update_layout(title=title, 
                       showlegend=False,
                       font=dict(color="#264A75"))
     return fig
@@ -600,8 +600,8 @@ if __name__ == '__main__':
     #i.e., if today is the third day of the month (when the new monthly datasets should be available) completely update the database.
     app.run_server(debug=False, host="0.0.0.0", port=8080)
     while True:
-        sleep(36000)
-        if datetime.now() == 3:
+        sleep(1)
+        if datetime.now().day == 3:
             print("Updating the databases")
             db._update_database()
     # Casper: 172.19.0.3
