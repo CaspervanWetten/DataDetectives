@@ -43,12 +43,12 @@ The Jupyternotebook is no longer used in the deployment of this application. It'
 
 ### Credits
 
-Ismaïl el Alami
-Dagmar van den Berg
-Laura Bröring
-Roy Schenk
-Thomas Valkenburg
-Casper van Wetten
+Ismaïl el Alami  
+Dagmar van den Berg  
+Laura Bröring  
+Roy Schenk  
+Thomas Valkenburg  
+Casper van Wetten  
 
 ### License
 
