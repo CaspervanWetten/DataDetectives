@@ -151,7 +151,7 @@ def update_bar_chart_energy_population(country):
 )
 def update_predicted(indicator, country, display):
     if country == "":
-        return create_empty_figure("")
+        return create_empty_figure()
     sql = f"""
         SELECT * 
         FROM {display}
@@ -178,7 +178,7 @@ def update_predicted(indicator, country, display):
 )
 def update_bar_energy_temperature_consumption(year, display, country):
     if country == "":
-        return create_empty_figure("")
+        return create_empty_figure()
     sql_energy = f"""
             SELECT e.country, e.month, e.gwh FROM {display} as e
             WHERE e.year='{year}' AND e.indicator = 'Consumption' AND e.country='{country}'
@@ -216,7 +216,7 @@ def update_bar_energy_temperature_consumption(year, display, country):
 )
 def update_bar_energy_temperature_production(year, display, country):
     if country == "":
-        return create_empty_figure("")
+        return create_empty_figure()
     sql_energy = f"""
             SELECT e.country, e.month, e.gwh FROM {display} as e
             WHERE e.year='{year}' AND e.indicator = 'Production' AND e.country='{country}'
@@ -254,7 +254,7 @@ def update_bar_energy_temperature_production(year, display, country):
 )
 def update_bar_energy_temperature_imports(year, display, country):
     if country == "":
-        return create_empty_figure("")
+        return create_empty_figure()
     sql_energy = f"""
             SELECT e.country, e.month, e.gwh FROM {display} as e
             WHERE e.year='{year}' AND e.indicator = 'Imports' AND e.country='{country}'
@@ -292,7 +292,7 @@ def update_bar_energy_temperature_imports(year, display, country):
 )
 def update_production_vs_consumption(year, display, country):
     if country == "":
-        return create_empty_figure("")
+        return create_empty_figure()
     
     sql_production_consumption = f"""
         SELECT e.country, e.indicator, e.month, e.gwh FROM {display} as e
@@ -344,7 +344,7 @@ indicator_colors = {
 )
 def update_pie_chart(year, country, selected_indicators):
     if country == "":
-        return create_empty_figure("")
+        return create_empty_figure()
     sql = f"""
         SELECT indicator, ktoe
         FROM electricity_types
@@ -503,13 +503,13 @@ def update_average_import_change(year, country):
 )
 def update_data(set_progress, n_clicks):
     if n_clicks <= 1:
-        return "Note, this can be a lengthy process depending on your internet speed and CPU power, click again to continue"
+        return "Note, this can be a lengthy process depending on your internet speed and CPU power, click The \"run job\" button again to continue"
     thread = Thread(target=db._update_database)
     thread.start()
 
-    for i in range(900):
-        set_progress((str(i), str(900)))
-        sleep(1)
+    for i in range(700):
+        set_progress((str(i), str(700)))
+        sleep(1.5)
     db._to_csv()
     thread.join()
 
@@ -599,11 +599,9 @@ if __name__ == '__main__':
     print("Starting the application....")
     #i.e., if today is the third day of the month (when the new monthly datasets should be available) completely update the database.
     app.run_server(debug=False, host="0.0.0.0", port=8080)
-    while True:
-        sleep(1)
-        if datetime.now().day == 3:
-            print("Updating the databases")
-            db._update_database()
+    if datetime.now().day == 3:
+        print("Updating the databases")
+        db._update_database()
     # Casper: 172.19.0.3
     # Thomas: 127.0.0.1:8080
     # Alle andere: 127.0.0.1
