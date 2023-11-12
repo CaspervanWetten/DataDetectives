@@ -13,9 +13,9 @@ from matplotlib import pyplot
 
 # Dit is de hoe de dfpred wordt gegenereerd als je show_plot aanroept en de query die hieronderstaat hieraan meegeeft zou het moeten werken en de country en indicator meegeven
 
-#query_6 = '''SELECT * FROM electricity_consumption'''
-#con = engine.connect()
-#dfpred = pd.read_sql(query_6, con, index_col = "index" )
+# query_6 = '''SELECT * FROM electricity_consumption'''
+# con = engine.connect()
+# dfpred = pd.read_sql(query_6, con, index_col="index")
 
 def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
     n_vars = 1 if type(data) is list else data.shape[1]
@@ -38,7 +38,8 @@ def random_forest_predict(df):
     trainX, trainy = train[:, :-n_out], train[:, -n_out:]  # Separate the last n_out columns as output
 
     # fit model with the provided hyperparameters
-    model = RandomForestRegressor(max_depth= None, max_features="sqrt", min_samples_leaf= 1, min_samples_split=2, n_estimators=500)
+    model = RandomForestRegressor(max_depth=None, max_features="sqrt", min_samples_leaf=1, min_samples_split=2,
+                                   n_estimators=500)
     model.fit(trainX, trainy)
 
     # construct an input for a new prediction
@@ -52,11 +53,11 @@ def random_forest_predict(df):
 def prediction(df):
     df['DATE'] = pd.to_datetime(df[['year', 'month']].assign(day=1))
     df = df.sort_values(by=["DATE"])
-    dfpred2 = df[["DATE","gwh"]]
-    dfpred2.set_index('DATE', inplace = True)
+    dfpred2 = df[["DATE", "gwh"]]
+    dfpred2.set_index('DATE', inplace=True)
     prediction = random_forest_predict(dfpred2)
     return prediction, dfpred2
-    
+
 def generate_fig(df):
     predresult = prediction(df)
     resultsplot = predresult[1]
@@ -64,9 +65,16 @@ def generate_fig(df):
     resultsplot["DATE"] = pd.to_datetime(resultsplot["DATE"])
     resultsplot["predict"] = False
     result = predresult[0].reshape(-1)
+
+    # Calculate Mean Absolute Error
+    actual_values = resultsplot["gwh"].loc[resultsplot["predict"] == False]
+    mae = mean_absolute_error(actual_values, result)
+    print(f"Mean Absolute Error: {mae}")
+
     for value in result:
         last_date = resultsplot["DATE"].max()
         new_date = last_date + pd.DateOffset(months=1)
         list_row = [new_date, value, True]
         resultsplot.loc[len(resultsplot)] = list_row
+    
     return resultsplot
