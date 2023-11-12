@@ -1,7 +1,6 @@
 import dash
 import pycountry
 import diskcache
-import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from Predictions import generate_fig
@@ -84,7 +83,6 @@ def update_choropleth(indicator, month, year, display):
         projection_scale=15,
         oceancolor='rgba(0,0,255,1)'       
     )
-    #TODO Add display check to change title
     fig.update_layout(
         autosize=True,
         geo=dict(

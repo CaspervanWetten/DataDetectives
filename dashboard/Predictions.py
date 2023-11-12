@@ -1,21 +1,9 @@
-from sqlalchemy import create_engine, text, inspect, Table
 import pandas as pd
-import plotly.express as px
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.datasets import make_regression
-import numpy as np
 from numpy import asarray
-from pandas import read_csv
-from pandas import DataFrame
-from pandas import concat
+from pandas import DataFrame, concat
 from sklearn.metrics import mean_absolute_error
-from matplotlib import pyplot
 
-# Dit is de hoe de dfpred wordt gegenereerd als je show_plot aanroept en de query die hieronderstaat hieraan meegeeft zou het moeten werken en de country en indicator meegeven
-
-# query_6 = '''SELECT * FROM electricity_consumption'''
-# con = engine.connect()
-# dfpred = pd.read_sql(query_6, con, index_col="index")
 
 def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
     n_vars = 1 if type(data) is list else data.shape[1]
@@ -35,9 +23,7 @@ def random_forest_predict(df):
     n_out = 12
     values = df.values
     train = series_to_supervised(values, n_in=n_in, n_out=n_out)
-    trainX, trainy = train[:, :-n_out], train[:, -n_out:]  # Separate the last n_out columns as output
-
-    # fit model with the provided hyperparameters
+    trainX, trainy = train[:, :-n_out], train[:, -n_out:]
     model = RandomForestRegressor(max_depth=None, max_features="sqrt", min_samples_leaf=1, min_samples_split=2,
                                    n_estimators=500)
     model.fit(trainX, trainy)
@@ -61,8 +47,6 @@ def generate_fig(df):
     resultsplot["DATE"] = pd.to_datetime(resultsplot["DATE"])
     resultsplot["predict"] = False
     result = predresult[0].reshape(-1)
-
-    # Calculate Mean Absolute Error
     actual_values = resultsplot["gwh"].loc[resultsplot["predict"] == False]
     mae = mean_absolute_error(actual_values, result)
     print(f"Mean Absolute Error: {mae}")
