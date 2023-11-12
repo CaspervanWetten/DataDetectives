@@ -11,12 +11,6 @@ from pandas import concat
 from sklearn.metrics import mean_absolute_error
 from matplotlib import pyplot
 
-# Dit is de hoe de dfpred wordt gegenereerd als je show_plot aanroept en de query die hieronderstaat hieraan meegeeft zou het moeten werken en de country en indicator meegeven
-
-#query_6 = '''SELECT * FROM electricity_consumption'''
-#con = engine.connect()
-#dfpred = pd.read_sql(query_6, con, index_col = "index" )
-
 def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
     n_vars = 1 if type(data) is list else data.shape[1]
     df = DataFrame(data)
