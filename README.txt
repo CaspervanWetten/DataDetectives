@@ -33,3 +33,8 @@ How do I use this barebone project? (Assuming you have Docker and the Docker eng
 - You can also use docker-compose up -d for running in daemon mode (hidden)
 - Running this command for the first time might take a few minutes
 - Jupyter notebook is available at localhost:8888 and dashboard at localhost:8080
+
+
+
+// KNOWN BUGS \\
+Sometimes Iceland and Norway disappear of the choropleth map for reasons unknown, reloading the dashboard fixes it.

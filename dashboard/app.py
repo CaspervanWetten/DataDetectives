@@ -11,6 +11,7 @@ from plotly.subplots import make_subplots
 from Database import Database
 from time import sleep
 from threading import Thread
+from datetime import datetime
 
 def convert_alpha3_full_name(alpha3_code):
     try:
@@ -598,7 +599,13 @@ app.layout = html.Div(children=[
 
 if __name__ == '__main__':
     print("Starting the application....")
-    app.run_server(debug=True, host="0.0.0.0", port=8080)
+    #i.e., if today is the third day of the month (when the new monthly datasets should be available) completely update the database.
+    app.run_server(debug=False, host="0.0.0.0", port=8080)
+    while True:
+        sleep(36000)
+        if datetime.now() == 3:
+            print("Updating the databases")
+            db._update_database()
     # Casper: 172.19.0.3
     # Thomas: 127.0.0.1:8080
     # Alle andere: 127.0.0.1
