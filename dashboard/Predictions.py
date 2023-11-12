@@ -30,15 +30,9 @@ def random_forest_predict(df):
     values = df.values
     train = series_to_supervised(values, n_in=n_in, n_out=n_out)
     trainX, trainy = train[:, :-n_out], train[:, -n_out:]  # Separate the last n_out columns as output
-
-    # fit model with the provided hyperparameters
     model = RandomForestRegressor(max_depth= None, max_features="sqrt", min_samples_leaf= 1, min_samples_split=2, n_estimators=500)
     model.fit(trainX, trainy)
-
-    # construct an input for a new prediction
     row = values[-n_in:].flatten()
-
-    # make the prediction
     yhat = model.predict(asarray([row]))
 
     return yhat
