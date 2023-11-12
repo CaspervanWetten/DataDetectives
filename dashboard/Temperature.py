@@ -139,7 +139,6 @@ def TemperatureDownloader(db, csv=False):
     EUList = ['AT', 'BE', 'BG', 'HR', 'CY', 'DK', 'EE', 'FI', 'FR', 'DE', 'IE', 'IT', 'LV', 'LU', 'NL', 'NO', 'PL', 'RO', 'ES', 'SE', 'CH', 'GB'] #The stations have alpha_2 internal ID's, this are the ID's we're using.
 
     # Prepare all the data for processing
-    # TODO If internet dies halfway through the download, it fails and the function errors out
     try:
         #Downloads and unzips the required temperature in the provided path
         DownloadTemperatureData(url, folderPath)
