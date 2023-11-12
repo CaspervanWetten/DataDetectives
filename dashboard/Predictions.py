@@ -58,4 +58,3 @@ def generate_fig(df):
         resultsplot.loc[len(resultsplot)] = list_row
     
     return resultsplot
-print("En nu casper?")

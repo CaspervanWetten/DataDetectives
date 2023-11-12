@@ -598,7 +598,7 @@ app.layout = html.Div(children=[
 if __name__ == '__main__':
     print("Starting the application....")
     #i.e., if today is the third day of the month (when the new monthly datasets should be available) completely update the database.
-    app.run_server(debug=False, host="127.0.0.1", port=8080)
+    app.run_server(debug=False, host="0.0.0.0", port=8080)
     while True:
         sleep(1)
         if datetime.now().day == 3:
