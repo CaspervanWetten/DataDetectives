@@ -5,7 +5,7 @@ services:
         tty: true
         build:
             context: .
-            dockerfile: dashboard/Dockerfile_dashboard  # Specify the unique Dockerfile name; I'm so not sure how this works
+            dockerfile: dashboard/Dockerfile_dashboard  # Specify the unique Dockerfile name;
         ports:
             - 8080:8080
         volumes:

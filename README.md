@@ -6,9 +6,9 @@ Welcome to the DataDetectives Dashboard, a powerful tool offering visualizations
 
 ## Known Bugs
 
-There is a known issue where data for Iceland and Norway may intermittently disappear on the choropleth map. If you encounter this, a simple page reload (not the entire service) should resolve the problem.   
+There is a known issue where data for Iceland and Norway may intermittently disappear on the choropleth map. If you encounter this, a simple page reload (not the entire service) should resolve the problem.
 
-Clicking on a country in the choropleth while downloading/preparing the new datasets *may* trigger an error requiring a complete restart. This behaviour is inconsistent, and varies wildly between machines (doesn't happen at all on some machines, happens semi-frequently on others). 
+Clicking on a country in the choropleth while downloading/preparing the new datasets *may* trigger an error requiring a complete restart. This behaviour is inconsistent, and varies wildly between machines (doesn't happen at all on some machines, happens semi-frequently on others).
 
 ## Installation and Usage
 
@@ -32,6 +32,7 @@ The DataDetectives Dashboard utilizes a PostgreSQL database to query information
 - `Temperature.py` handles the temperature data pipeline.
 - `PerCapita.py` calculates per capita energy usage.
 - `Predictions.py` utilizes an optimized random forest regressor to predict GWH usage.
+- `Prediction-checkpoint.ipynb` in the notebook folder shows the optimization parameters for the used forest tree regression algorithm
 
 ## Data Sources
 

@@ -47,9 +47,6 @@ def generate_fig(df):
     resultsplot["DATE"] = pd.to_datetime(resultsplot["DATE"])
     resultsplot["predict"] = False
     result = predresult[0].reshape(-1)
-    actual_values = resultsplot["gwh"].loc[resultsplot["predict"] == False]
-    mae = mean_absolute_error(actual_values, result)
-    print(f"Mean Absolute Error: {mae}")
 
     for value in result:
         last_date = resultsplot["DATE"].max()

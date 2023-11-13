@@ -41,20 +41,24 @@ class Database:
         self.metadata.reflect(self.engine)
 
     def _update_database(self):
-        print("dropping old data...")
-        self._drop_all_tables()
-        print("Downloading new population data...")
-        self._load_data(population=DownloadPopulationData())
-        print("Downloading new monthly electricity data...")
-        self._load_data(electricity_consumption=MonthlyElectricity())
-        print("Downloading new segregated electricity data...") #shit am I racist????
-        self._load_data(electricity_types=TypesOfEnergy())
-        print("Calculating the per capita energy") 
-        self._load_data(energy_capita = caculate_per_capita(self._fetch_data("SELECT * FROM population"), self._fetch_data("SELECT * FROM electricity_consumption")))
-        #The temperature data appends the database, hence why it passes the database as a self object
-        TemperatureDownloader(db=self)
-        self.metadata.reflect(self.engine)
-        self.inspector = inspect(self.engine)
+        try:
+            print("dropping old data...")
+            self._drop_all_tables()
+            print("Downloading new population data...")
+            self._load_data(population=DownloadPopulationData())
+            print("Downloading new monthly electricity data...")
+            self._load_data(electricity_consumption=MonthlyElectricity())
+            print("Downloading new segregated electricity data...") #shit am I racist????
+            self._load_data(electricity_types=TypesOfEnergy())
+            print("Calculating the per capita energy") 
+            self._load_data(energy_capita = caculate_per_capita(self._fetch_data("SELECT * FROM population"), self._fetch_data("SELECT * FROM electricity_consumption")))
+            #The temperature data appends the database, hence why it passes the database as a self object
+            TemperatureDownloader(db=self)
+            self.inspector = inspect(self.engine)
+            self.metadata.reflect(self.engine)
+        except Exception as e:
+            print(f"Can't populate data from the pipeline files due to \n{e}\nPopulating data from CSV instead...")
+            self._update_database_csv()
 
     def is_empty(self):
         table_list = ["electricity_consumption", "electricity_types", "energy_capita", "population", "temperature"]
