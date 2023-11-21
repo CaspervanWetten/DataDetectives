@@ -10,6 +10,8 @@ There is a known issue where data for Iceland and Norway may intermittently disa
 
 Clicking on a country in the choropleth while downloading/preparing the new datasets *may* trigger an error requiring a complete restart. This behaviour is inconsistent, and varies wildly between machines (doesn't happen at all on some machines, happens semi-frequently on others).
 
+The database calls the pipeline if the CSV population fails, and the CSV if the pipeline population fails. If both of these fail, it will be stuck in an infinite loop causing a recursion error. So far, this has never happened, but it is a theoretical issue.
+
 ## Installation and Usage
 
 Setting up and running the DataDetectives Dashboard is a straightforward process:
